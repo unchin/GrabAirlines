@@ -4,6 +4,7 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.airlines.service.JejuAirService;
+import com.airlines.util.SeleniumUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -27,7 +28,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         log.info("=============== 开始抓取7C航空 ==================" + start);
 
         String url = "https://www.jejuair.net/zh-cn/main/base/index.do";
-        WebDriver driver = getWebDriver();
+        WebDriver driver = SeleniumUtil.getWebDriver();
         driver.get(url);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
 
@@ -167,26 +168,6 @@ public class JejuAirServiceImpl implements JejuAirService {
         Optional<WebElement> button = activeNotList.stream().findFirst();
         Thread.sleep(1000);
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
-    }
-
-    private static WebDriver getWebDriver() {
-        //设置chrome选项
-        ChromeOptions options = new ChromeOptions();
-//        options.addArguments("--headless");//开启无头模式
-        //禁止gpu渲染
-        options.addArguments("--disable-gpu");
-        //关闭沙盒模式
-        options.addArguments("–-no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        //禁止加载图片
-        options.addArguments("--blink-settings=imagesEnabled=false");
-        // 去掉 webdriver痕迹
-        options.addArguments("disable-blink-features=AutomationControlled");
-
-        options.addArguments("--user-agent=Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
-//        options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36");
-
-        return new ChromeDriver(options);
     }
 
     private static void grab(WebDriver driver) throws InterruptedException {
