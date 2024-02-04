@@ -23,6 +23,8 @@ import java.util.Optional;
 public class JejuAirServiceImpl implements JejuAirService {
 
     public static void main(String[] args) throws InterruptedException {
+        DateTime start = DateTime.now();
+        log.info("=============== 开始抓取7C航空 ==================" + start);
 
         String url = "https://www.jejuair.net/zh-cn/main/base/index.do";
         WebDriver driver = getWebDriver();
@@ -30,14 +32,20 @@ public class JejuAirServiceImpl implements JejuAirService {
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
 
         String dateStr = getDateStr();
+        log.info("------------- " + dateStr + "-------------");
         mockClick(driver, dateStr);
         grab(driver);
 
         // 需要往后爬几天，就在这里循环几次
-        mockClickNextday(driver);
-        grab(driver);
+        for (int i = 1; i < 15; i++) {
+            dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
+            log.info("-------------" + dateStr + "-------------");
+            mockClickNextday(driver);
+            grab(driver);
+        }
 
         driver.quit();
+        log.info("=============== 抓取7C航空结束 ==================");
     }
 
     private static void mockClickNextday(WebDriver driver) throws InterruptedException {
@@ -66,11 +74,11 @@ public class JejuAirServiceImpl implements JejuAirService {
         // 选择出发地点
         Thread.sleep(1000);
         driver.findElement(By.id("plugin-DEPtab-4")).click();
-        driver.findElement(By.cssSelector("button[data-stationcode='MFM']")).click();
+        driver.findElement(By.cssSelector("button[data-stationcode='TAO']")).click();
 
         // 点击到达地点
-        Thread.sleep(1000);
-        driver.findElement(By.id("spanArrivalDesc")).click();
+//        Thread.sleep(1000);
+//        driver.findElement(By.id("spanArrivalDesc")).click();
 
         // 选择到达地点
         Thread.sleep(1000);
@@ -79,8 +87,8 @@ public class JejuAirServiceImpl implements JejuAirService {
         element.findElements(By.className("choise")).get(0).click();
 
         // 点击出发时间
-        Thread.sleep(1000);
-        driver.findElement(By.id("btnDatePicker")).click();
+//        Thread.sleep(1000);
+//        driver.findElement(By.id("btnDatePicker")).click();
 
         // 选择日历组件
         Thread.sleep(1000);
@@ -102,7 +110,8 @@ public class JejuAirServiceImpl implements JejuAirService {
 
         // 搜索
         Thread.sleep(1000);
-        driver.findElement(By.id("searchFlight")).click();
+        WebElement searchFlight = driver.findElement(By.id("searchFlight"));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", searchFlight);
         Thread.sleep(3000);
 
         refreshPage(driver);
@@ -181,7 +190,7 @@ public class JejuAirServiceImpl implements JejuAirService {
     }
 
     private static void grab(WebDriver driver) throws InterruptedException {
-        log.info("=============== 开始抓取7C航空 ==================");
+
         // 航班日期报价列表
         String departureCity = driver.findElement(By.id("moSpanDepartureDesc")).getText();
         String arrivalCity = driver.findElement(By.id("moSpanArrivalDesc")).getText();
@@ -226,7 +235,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         // 持续时间
         WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
         String durationText = durationTotal.getText();
-        log.info("持续时间：" + durationText);
+        log.info("持续时间：" + durationText.substring(0,7));
 
         // 结束时间
         WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
@@ -283,7 +292,7 @@ public class JejuAirServiceImpl implements JejuAirService {
             List<WebElement> landingList = flightList.findElements(By.cssSelector("[class = 'flight-time__list-item via-line']"));
             for (WebElement landing : landingList) {
                 // 记录这是第几次循环
-                int index = takeoffList.indexOf(landing) + 1;
+                int index = landingList.indexOf(landing) + 1;
                 log.info("第" + index + "次行程");
 
                 String takeoffCity = landing.findElement(By.className("title")).getText();
