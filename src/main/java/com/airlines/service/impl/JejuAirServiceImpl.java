@@ -46,7 +46,8 @@ public class JejuAirServiceImpl implements JejuAirService {
         }
 
         // 修改城市
-        driver.findElement(By.xpath("//li[@data-triptype='OW']")).click();
+        mockStationAndDate(driver, dateStr);
+
 
         driver.quit();
         log.info("=============== 抓取7C航空结束 ==================");
@@ -71,16 +72,18 @@ public class JejuAirServiceImpl implements JejuAirService {
         Thread.sleep(1000);
         driver.findElement(By.xpath("//li[@data-triptype='OW']")).click();
 
+        mockStationAndDate(driver, dateStr);
+    }
+
+    private static void mockStationAndDate(WebDriver driver, String dateStr) throws InterruptedException {
         // 点击出发地点
         Thread.sleep(1000);
-        WebElement spanDepartureDesc = driver.findElement(By.id("spanDepartureDesc"));
-        spanDepartureDesc.sendKeys("澳门");
-//        spanDepartureDesc.click();
+        driver.findElement(By.id("spanDepartureDesc")).click();
 
         // 选择出发地点
-//        Thread.sleep(1000);
-//        driver.findElement(By.id("plugin-DEPtab-4")).click();
-//        driver.findElement(By.cssSelector("button[data-stationcode='TAO']")).click();
+        Thread.sleep(1000);
+        driver.findElement(By.id("plugin-DEPtab-4")).click();
+        driver.findElement(By.cssSelector("button[data-stationcode='TAO']")).click();
 
         // 点击到达地点
 //        Thread.sleep(1000);
@@ -312,6 +315,5 @@ public class JejuAirServiceImpl implements JejuAirService {
         driver.executeScript("arguments[0].click();", detail);
         Thread.sleep(1000);
     }
-
 
 }
