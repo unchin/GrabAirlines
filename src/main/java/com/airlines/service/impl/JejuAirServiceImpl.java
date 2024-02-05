@@ -38,12 +38,15 @@ public class JejuAirServiceImpl implements JejuAirService {
         grab(driver);
 
         // 需要往后爬几天，就在这里循环几次
-        for (int i = 1; i < 15; i++) {
+        for (int i = 1; i < 2; i++) {
             dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
             log.info("-------------" + dateStr + "-------------");
             mockClickNextday(driver);
             grab(driver);
         }
+
+        // 修改城市
+        driver.findElement(By.xpath("//li[@data-triptype='OW']")).click();
 
         driver.quit();
         log.info("=============== 抓取7C航空结束 ==================");
@@ -70,12 +73,14 @@ public class JejuAirServiceImpl implements JejuAirService {
 
         // 点击出发地点
         Thread.sleep(1000);
-        driver.findElement(By.id("spanDepartureDesc")).click();
+        WebElement spanDepartureDesc = driver.findElement(By.id("spanDepartureDesc"));
+        spanDepartureDesc.sendKeys("澳门");
+//        spanDepartureDesc.click();
 
         // 选择出发地点
-        Thread.sleep(1000);
-        driver.findElement(By.id("plugin-DEPtab-4")).click();
-        driver.findElement(By.cssSelector("button[data-stationcode='TAO']")).click();
+//        Thread.sleep(1000);
+//        driver.findElement(By.id("plugin-DEPtab-4")).click();
+//        driver.findElement(By.cssSelector("button[data-stationcode='TAO']")).click();
 
         // 点击到达地点
 //        Thread.sleep(1000);
