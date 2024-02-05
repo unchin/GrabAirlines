@@ -7,19 +7,23 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.time.Duration;
+import java.util.List;
 
 public class SeleniumUtil {
 
     public static void main(String[] args) {
         WebDriver driver = new ChromeDriver();
 
-        driver.get("https://www.selenium.dev/selenium/web/web-form.html");
+        driver.get("F:\\rep\\GrabAirlines\\src\\main\\java\\com\\airlines\\util\\HtmlUtil.html");
         driver.getTitle();
-        driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500));
-        WebElement textBox = driver.findElement(By.name("my-text"));
-        WebElement submitButton = driver.findElement(By.cssSelector("button"));
-        textBox.sendKeys("Selenium");
-        submitButton.click();
+        List<WebElement> elementsWithDataStationCode = driver.findElements(By.cssSelector("[data-stationcode]"));
+
+        // 遍历并打印每个元素的 data-stationcode 值
+        for (WebElement element : elementsWithDataStationCode) {
+            String dataStationCodeValue = element.getAttribute("data-stationcode");
+            System.out.println("data-stationcode value: " + dataStationCodeValue);
+        }
+
         driver.quit();
     }
 
