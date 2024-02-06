@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -39,13 +41,13 @@ public class JejuAirServiceImpl implements JejuAirService {
             mockClick(driver, dateStr);
             grab(driver);
 
-//        // 需要往后爬几天，就在这里循环几次
-//        for (int i = 1; i < 2; i++) {
-//            dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
-//            log.info("-------------" + dateStr + "-------------");
-//            mockClickNextday(driver);
-//            grab(driver);
-//        }
+        // 需要往后爬几天，就在这里循环几次
+        for (int i = 1; i < 2; i++) {
+            dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
+            log.info("-------------" + dateStr + "-------------");
+            mockClickNextday(driver);
+            grab(driver);
+        }
 
             // 修改城市
             Thread.sleep(2000);
@@ -87,60 +89,96 @@ public class JejuAirServiceImpl implements JejuAirService {
         Thread.sleep(1000);
         driver.findElement(By.id("spanDepartureDesc")).click();
 
-        boolean notFirst = false;
-        // 获取出发地点列表
-        List<String> departureStationCodeList = getStationCodeList(driver);
-        log.info("出发地点列表：" + departureStationCodeList);
-        for (String stationCode : departureStationCodeList) {
+//        boolean notFirst = false;
+//        // 获取出发地点列表
+//        List<String> departureStationCodeList = getStationCodeList(driver);
+//        log.info("出发地点列表：" + departureStationCodeList);
+//        for (String stationCode : departureStationCodeList) {
+//
+//            // 如果不是第一次进入这个循环体，那么需要点击一下出发地点的选择
+//            if (notFirst) {
+//                Thread.sleep(1000);
+//                driver.findElement(By.id("spanArrivalDesc")).click();
+//            }notFirst = true;
+//
+//            // 选择出发地点
+//            Thread.sleep(1000);
+//            log.info("出发地点：" + stationCode);
+//            WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + stationCode + "][data-stationtype='DEP']"));
+//            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
+//
+//            Thread.sleep(1000);
+//            List<String> arrivalStationCodeList = getStationCodeList(driver);
+//            log.info("到达地点列表：" + departureStationCodeList);
+//            for (String arrivalStationCode : arrivalStationCodeList) {
+//                log.info("到达地点：" + arrivalStationCode);
+//
+//                // 如果不是第一次进入这个循环体，那么需要点击一下到达地点的选择
+//                if (notFirst) {
+//                    Thread.sleep(1000);
+//                    driver.findElement(By.id("spanArrivalDesc")).click();
+//                }
+//                notFirst = true;
+//
+//                // 选择到达地点
+//                List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
+//                if (!arrivalStations.isEmpty()) {
+//                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
+//                    mockDateAndSelectClick(driver, dateStr);
+//                    grab(driver);
+//                }
+//            }
+//        }
+            // 获取出发地点列表
+            List<String> departureStationCodeList = getStationCodeList(driver);
+            log.info("出发地点列表：" + departureStationCodeList);
 
-            // 如果不是第一次进入这个循环体，那么需要点击一下到达地点的选择
-            if (notFirst) {
-                Thread.sleep(1000);
-                driver.findElement(By.id("spanArrivalDesc")).click();
-            }notFirst = true;
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
-            // 选择出发地点
-            Thread.sleep(1000);
-            log.info("出发地点：" + stationCode);
-            WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + stationCode + "][data-stationtype='DEP']"));
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
+            for (String stationCode : departureStationCodeList) {
+                // 点击出发地点的选择
+                wait.until(ExpectedConditions.elementToBeClickable(By.id("spanArrivalDesc"))).click();
 
-            Thread.sleep(1000);
-            List<String> arrivalStationCodeList = getStationCodeList(driver);
-            log.info("到达地点列表：" + departureStationCodeList);
-            for (String arrivalStationCode : arrivalStationCodeList) {
-                log.info("到达地点：" + arrivalStationCode);
+                // 选择出发地点
+                WebElement departureStation = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("button[data-stationcode='" + stationCode + "'][data-stationtype='DEP']")));
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
 
-                // 如果不是第一次进入这个循环体，那么需要点击一下到达地点的选择
-                if (notFirst) {
-                    Thread.sleep(1000);
-                    driver.findElement(By.id("spanArrivalDesc")).click();
-                }
-                notFirst = true;
+                List<String> arrivalStationCodeList = getStationCodeList(driver);
+                log.info("到达地点列表：" + arrivalStationCodeList);
 
-                // 选择到达地点
-                List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
-                if (!arrivalStations.isEmpty()) {
-                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
-                    mockDateAndSelectClick(driver, dateStr);
-                    grab(driver);
+                for (String arrivalStationCode : arrivalStationCodeList) {
+                    log.info("到达地点：" + arrivalStationCode);
+
+                    // 点击到达地点的选择
+                    wait.until(ExpectedConditions.elementToBeClickable(By.id("spanArrivalDesc"))).click();
+
+                    // 选择到达地点
+                    List<WebElement> arrivalStations = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("button[data-stationcode='" + arrivalStationCode + "'][data-stationtype='ARR']")));
+
+                    if (!arrivalStations.isEmpty()) {
+                        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
+                        mockDateAndSelectClick(driver, dateStr);
+                        grab(driver);
+                    }
                 }
             }
-        }
+
+
     }
 
-    private static List<String> getStationCodeList(WebDriver driver) {
-        List<String> stationCodeList = new ArrayList<>();
+    /**
+     * 获取地点列表,这里的列表内容是动态的，不同的出发地点对应不同的到达地点
+     * @param driver 浏览器内容
+     * @return 地点列表
+     */
+    private static List<String> getStationCodeList(WebDriver driver) throws NoSuchElementException{
 
         WebElement select = driver.findElement(By.className("main--destination-select"));
         List<WebElement> departureStationList = select.findElements(By.cssSelector("button[data-stationcode]"));
 
-        for (WebElement station : departureStationList) {
-            String stationCode = station.getAttribute("data-stationcode");
-            stationCodeList.add(stationCode);
-        }
-
-        return stationCodeList;
+        return departureStationList.stream()
+                .map(webElement -> webElement.getAttribute("data-stationcode"))
+                .collect(Collectors.toList());
     }
 
     private static void mockDateAndSelectClick(WebDriver driver, String dateStr) throws InterruptedException {
