@@ -135,15 +135,20 @@ public class JejuAirServiceImpl implements JejuAirService {
 
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
-            for (String stationCode : departureStationCodeList) {
+            for (String departureStationCode : departureStationCodeList) {
+                log.info("出发地点：" + departureStationCode);
                 // 点击出发地点的选择
                 wait.until(ExpectedConditions.elementToBeClickable(By.id("spanArrivalDesc"))).click();
 
                 // 选择出发地点
-                WebElement departureStation = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("button[data-stationcode='" + stationCode + "'][data-stationtype='DEP']")));
+                WebElement departureStation = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("button[data-stationcode='" + departureStationCode + "'][data-stationtype='DEP']")));
                 ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
 
                 List<String> arrivalStationCodeList = getStationCodeList(driver);
+
+                // 过滤掉出发地点
+                arrivalStationCodeList = arrivalStationCodeList.stream().filter(arrivalStationCode -> !arrivalStationCode.equals(departureStationCode)).toList();
+
                 log.info("到达地点列表：" + arrivalStationCodeList);
 
                 for (String arrivalStationCode : arrivalStationCodeList) {
