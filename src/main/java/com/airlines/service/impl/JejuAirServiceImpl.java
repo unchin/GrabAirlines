@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -272,7 +273,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         String unit = active.findElement(By.className("unit")).getText();
         String priceTxt = active.findElement(By.className("price_txt")).getText();
         String priceStr = StrUtil.cleanBlank(priceTxt).replaceAll(",", "");
-        int priceNum = Integer.parseInt(priceStr);
+        BigDecimal priceNum = new BigDecimal(priceStr);
         log.info("价格：" + priceNum + " " + unit);
 
         // 最低价机票信息栏
