@@ -8,22 +8,17 @@ import com.airlines.service.JejuAirService;
 import com.airlines.util.SeleniumUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-
+/**
+ * @author: unchin
+ * @description: JejuAirServiceImpl
+ * @create: 2024-02-01 14:36
+ */
 @Service
 @Slf4j
 public class JejuAirServiceImpl implements JejuAirService {
@@ -84,13 +79,13 @@ public class JejuAirServiceImpl implements JejuAirService {
         List<String> departureStationCodeList = getStationCodeList(driver, "DEP");
         log.info("出发地点CODE列表：" + departureStationCodeList);
 
-        for (String departureStationCode : departureStationCodeList.subList(0,2)) {
+        for (String departureStationCode : departureStationCodeList) {
             log.info("出发地点CODE：" + departureStationCode);
             mockClickDepartureStation(driver, departureStationCode);
 
             // 获取到达地点CODE列表
             List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode);
-            for (String arrivalStationCode : arrivalStationCodeList.subList(0,2)) {
+            for (String arrivalStationCode : arrivalStationCodeList) {
                 mockClickArrivalStation(driver, departureStationCode, arrivalStationCode);
                 mockDateAndSelectClick(driver, dateStr);
                 grab(driver);
@@ -142,7 +137,7 @@ public class JejuAirServiceImpl implements JejuAirService {
     private static List<String> getStationCodeList(WebDriver driver, String status) throws NoSuchElementException, InterruptedException {
 
         WebElement statusElement;
-        if (status.equals("DEP")) {
+        if ("DEP".equals(status)) {
             driver.findElement(By.id("spanDepartureDesc")).click();
             Thread.sleep(1000);
             statusElement = driver.findElement(By.id("divDepArea"));
