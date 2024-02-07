@@ -43,7 +43,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         driver.manage().window().maximize();
 
         String dateStr = getDateStr();
-        log.info("------------- " + dateStr + "-------------");
+        log.info("------------- " + dateStr + "开始抓取 -------------");
 
         try {
             mockClick(driver, dateStr);
@@ -110,8 +110,7 @@ public class JejuAirServiceImpl implements JejuAirService {
 
                 // 需要往后爬几天，就在这里循环几次
                 for (int i = 1; i < 5; i++) {
-                    dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
-                    log.info("-------------" + dateStr + "-------------");
+                    log.info("-------------" + DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd") + "-------------");
                     mockClickNextday(driver);
                     grab(driver);
                 }
@@ -237,6 +236,9 @@ public class JejuAirServiceImpl implements JejuAirService {
 
     private static void mockReclick(WebDriver driver) throws InterruptedException {
         List<WebElement> activeNotList = driver.findElements(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active']"));
+        if (activeNotList.isEmpty()) {
+            return;
+        }
         Optional<WebElement> button = activeNotList.stream().findFirst();
         Thread.sleep(1000);
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
