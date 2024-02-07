@@ -267,8 +267,9 @@ public class JejuAirServiceImpl implements JejuAirService {
         log.info("价格：" + priceNum + " " + unit);
 
         // 最低价机票信息栏
-        WebElement fareList = driver.findElement(By.className("fare-list"));
-        WebElement chip = fareList.findElement(By.cssSelector("[class = 'chip lowest']"));
+        List<WebElement> fareList = driver.findElements(By.className("fare-list"));
+        if (fareList.isEmpty()) {return;}
+        WebElement chip = fareList.get(0).findElement(By.cssSelector("[class = 'chip lowest']"));
         WebElement chips = chip.findElement(By.xpath(".."));
         WebElement head = chips.findElement(By.xpath(".."));
         WebElement listSummary = head.findElement(By.xpath(".."));
