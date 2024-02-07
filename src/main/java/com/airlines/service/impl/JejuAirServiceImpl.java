@@ -85,29 +85,15 @@ public class JejuAirServiceImpl implements JejuAirService {
         log.info("出发地点CODE列表：" + departureStationCodeList);
 
         for (String departureStationCode : departureStationCodeList.subList(0,2)) {
-
-            // 选择出发地点CODE
-            driver.findElement(By.id("spanDepartureDesc")).click();
-            Thread.sleep(1000);
-            WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + departureStationCode + "][data-stationtype='DEP']"));
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
             log.info("出发地点CODE：" + departureStationCode);
+            mockClickDepartureStation(driver, departureStationCode);
 
             // 获取到达地点CODE列表
             List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode, departureStationCodeList);
             for (String arrivalStationCode : arrivalStationCodeList.subList(0,2)) {
-
-                // 选择到达地点CODE
-                driver.findElement(By.id("spanArrivalDesc")).click();
-                Thread.sleep(1000);
-                List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
-                log.info("==============================");
-                log.info("出发地点CODE：" + departureStationCode +" -- 到达地点CODE：" + arrivalStationCode);
-
+                mockClickArrivalStation(driver, departureStationCode, arrivalStationCode);
                 mockDateAndSelectClick(driver, dateStr);
                 grab(driver);
-
                 // 需要往后爬几天，就在这里循环几次
                 for (int i = 1; i < 5; i++) {
                     log.info("-------------" + DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd") + "-------------");
@@ -116,6 +102,24 @@ public class JejuAirServiceImpl implements JejuAirService {
                 }
             }
         }
+    }
+
+    private static void mockClickArrivalStation(WebDriver driver, String departureStationCode, String arrivalStationCode) throws InterruptedException {
+        // 选择到达地点CODE
+        driver.findElement(By.id("spanArrivalDesc")).click();
+        Thread.sleep(1000);
+        List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
+        log.info("==============================");
+        log.info("出发地点CODE：" + departureStationCode +" -- 到达地点CODE：" + arrivalStationCode);
+    }
+
+    private static void mockClickDepartureStation(WebDriver driver, String departureStationCode) throws InterruptedException {
+        // 选择出发地点CODE
+        driver.findElement(By.id("spanDepartureDesc")).click();
+        Thread.sleep(1000);
+        WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + departureStationCode + "][data-stationtype='DEP']"));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
     }
 
     private static List<String> getArrivalStationCodeList(WebDriver driver, String stationCode, List<String> departureStationCodeList) throws InterruptedException {
@@ -239,7 +243,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         if (activeNotList.isEmpty()) {
             return;
         }
-        Optional<WebElement> button = activeNotList.stream().findFirst();
+        WebElement button = activeNotList.get(0);
         Thread.sleep(1000);
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
     }
