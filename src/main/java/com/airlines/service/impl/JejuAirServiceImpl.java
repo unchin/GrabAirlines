@@ -274,6 +274,10 @@ public class JejuAirServiceImpl implements JejuAirService {
 
         // 最低价机票信息栏
         List<WebElement> fareList = driver.findElements(By.className("fare-list"));
+        if (fareList.isEmpty()) {
+            log.info("没有最低价机票信息");
+            return;
+        }
         WebElement chip = fareList.get(0).findElement(By.cssSelector("[class = 'chip lowest']"));
         WebElement chips = chip.findElement(By.xpath(".."));
         WebElement head = chips.findElement(By.xpath(".."));
