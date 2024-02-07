@@ -56,13 +56,13 @@ public class JejuAirServiceImpl implements JejuAirService {
         }
     }
 
-    private static void mockClickNextday(WebDriver driver) throws InterruptedException, NoSuchElementException {
+    private static boolean mockClickNextday(WebDriver driver) throws InterruptedException, NoSuchElementException {
         Thread.sleep(1000);
         WebElement nextDay = driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-next']"));
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", nextDay);
         Thread.sleep(3000);
 
-        refreshResult(driver);
+        return refreshResult(driver);
     }
 
     private static String getDateStr() {
@@ -94,12 +94,18 @@ public class JejuAirServiceImpl implements JejuAirService {
                 mockClickArrivalStation(driver, departureStationCode, arrivalStationCode);
                 boolean flag = mockDateAndSelectClick(driver, dateStr);
                 // 如果 flag 为 false，说明没有航班，直接跳过
-                if (!flag) {continue;}
+                if (!flag) {
+                    continue;
+                }
                 grab(driver);
                 // 需要往后爬几天，就在这里循环几次
                 for (int i = 1; i < NEXT_DAY_NUM; i++) {
                     log.info("-------------" + DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd") + "-------------");
-                    mockClickNextday(driver);
+                    boolean b = mockClickNextday(driver);
+                    // 如果 b 为 false，说明没有航班，直接跳过
+                    if (!b) {
+                        continue;
+                    }
                     grab(driver);
                 }
             }
@@ -212,26 +218,24 @@ public class JejuAirServiceImpl implements JejuAirService {
         return attempts != maxAttempts;
     }
 
-    private static void refreshResult(WebDriver driver) throws InterruptedException {
+    private static boolean refreshResult(WebDriver driver) throws InterruptedException {
         // 最大尝试次数
         int maxAttempts = 15;
         int attempts = 0;
         while (attempts < maxAttempts) {
 
-            try {
-                // 尝试找到有效的机票信息列表
-                driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active active']"));
-                break;
-            } catch (org.openqa.selenium.NoSuchElementException e) {
-
-                // 元素未找到的异常处理：重新点击日期标签
-                mockReclick(driver);
-
-                // 增加尝试次数
-                attempts++;
-                log.info("第" + attempts + "次重新点击日期标签");
+            // 尝试找到有效的机票信息列表
+            List<WebElement> list = driver.findElements(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active active']"));
+            if (!list.isEmpty()) {
+                break;// 成功找到元素，无需刷新
             }
+            // 元素未找到的异常处理：重新点击日期标签
+            mockReclick(driver);
+            // 增加尝试次数
+            attempts++;
+            log.info("第" + attempts + "次重新点击日期标签");
         }
+        return attempts != maxAttempts;
     }
 
     private static void mockReclick(WebDriver driver) throws InterruptedException {
@@ -314,6 +318,10 @@ public class JejuAirServiceImpl implements JejuAirService {
         // 持续时间
         WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
         String durationText = durationTotal.getText();
+        if (durationText.contains(LINE_FEED)) {
+            String[] arrivalTimeTextArr = durationText.split(LINE_FEED);
+            durationText = arrivalTimeTextArr[0];
+        }
         log.info("持续时间：" + durationText);
 
         // 机票类型
