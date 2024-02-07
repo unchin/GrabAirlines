@@ -84,7 +84,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         List<String> departureStationCodeList = getStationCodeList(driver, "DEP");
         log.info("出发地点CODE列表：" + departureStationCodeList);
 
-        for (String departureStationCode : departureStationCodeList) {
+        for (String departureStationCode : departureStationCodeList.subList(0,2)) {
 
             // 选择出发地点CODE
             driver.findElement(By.id("spanDepartureDesc")).click();
@@ -95,7 +95,7 @@ public class JejuAirServiceImpl implements JejuAirService {
 
             // 获取到达地点CODE列表
             List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode, departureStationCodeList);
-            for (String arrivalStationCode : arrivalStationCodeList) {
+            for (String arrivalStationCode : arrivalStationCodeList.subList(0,2)) {
 
                 // 选择到达地点CODE
                 driver.findElement(By.id("spanArrivalDesc")).click();
@@ -109,7 +109,7 @@ public class JejuAirServiceImpl implements JejuAirService {
                 grab(driver);
 
                 // 需要往后爬几天，就在这里循环几次
-                for (int i = 1; i < 2; i++) {
+                for (int i = 1; i < 5; i++) {
                     dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
                     log.info("-------------" + dateStr + "-------------");
                     mockClickNextday(driver);
@@ -283,23 +283,28 @@ public class JejuAirServiceImpl implements JejuAirService {
         // 开始时间
         WebElement departureTime = listSummary.findElement(By.cssSelector("[class = 'time-num start']"));
         String departureTimeText = departureTime.getText();
+
         // 将departureTimeText通过换行符拆分为两个字符串
-        String[] departureTimeTextArr = departureTimeText.split("\n");
-        String departureTimeText1 = departureTimeTextArr[0];
-        String departureTimeText2 = departureTimeTextArr[1];
-        String departureDate = departureTime.getAttribute("data-gmt");
-        log.info("出发时间：" + departureTimeText1);
+        if (departureTimeText.contains("\n")) {
+            String[] departureTimeTextArr = departureTimeText.split("\n");
+            departureTimeText = departureTimeTextArr[0];
+            String departureTimeText2 = departureTimeTextArr[1];
+            log.info("出发地点：" + departureTimeText2);
+        }
+
+        log.info("出发时间：" + departureTimeText);
 
         // 结束时间
         WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
         String arrivalTimeText = arrivalTime.getText();
-        String arrivalDate = arrivalTime.getAttribute("data-landingdate");
-        String[] arrivalTimeTextArr = arrivalTimeText.split("\n");
-        String arrivalTimeText1 = arrivalTimeTextArr[0];
-        String arrivalTimeText2 = arrivalTimeTextArr[1];
-        log.info("到达时间：" + arrivalTimeText1);
+        if (arrivalTimeText.contains("\n")) {
+            String[] arrivalTimeTextArr = arrivalTimeText.split("\n");
+            arrivalTimeText = arrivalTimeTextArr[0];
+            String arrivalTimeText2 = arrivalTimeTextArr[1];
+            log.info("到达地点：" + arrivalTimeText2);
+        }
+        log.info("到达时间：" + arrivalTimeText);
 
-        log.info(departureTimeText2 + " -- " + arrivalTimeText2);
 
         // 持续时间
         WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
