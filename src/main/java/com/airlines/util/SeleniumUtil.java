@@ -1,5 +1,6 @@
 package com.airlines.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -7,8 +8,11 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+@Slf4j
 public class SeleniumUtil {
 
     public static void main(String[] args) {
@@ -16,13 +20,22 @@ public class SeleniumUtil {
 
         driver.get("F:\\rep\\GrabAirlines\\src\\main\\java\\com\\airlines\\util\\HtmlUtil.html");
         driver.getTitle();
-        List<WebElement> elementsWithDataStationCode = driver.findElements(By.cssSelector("[data-stationcode]"));
+        WebElement statusElement;
+            statusElement = driver.findElement(By.id("divArrArea"));
+        // divArrArea的上上级
+        WebElement statusElementParent = statusElement.findElement(By.xpath(".."));
+        statusElementParent = statusElementParent.findElement(By.xpath(".."));
 
-        // 遍历并打印每个元素的 data-stationcode 值
-        for (WebElement element : elementsWithDataStationCode) {
-            String dataStationCodeValue = element.getAttribute("data-stationcode");
-            System.out.println("data-stationcode value: " + dataStationCodeValue);
+        List<WebElement> departureStationList = statusElementParent.findElements(By.cssSelector("button[data-stationcode]"));
+        log.info("查询出来的地点列表大小" + departureStationList.size());
+
+        // 取出所有地点的code
+        List<String> departureStationCodeList = new ArrayList<>();
+        for (WebElement station : departureStationList) {
+            String stationCode = station.getAttribute("data-stationcode");
+            departureStationCodeList.add(stationCode);
         }
+        log.info("查询出来的地点列表" + departureStationCodeList);
 
         driver.quit();
     }

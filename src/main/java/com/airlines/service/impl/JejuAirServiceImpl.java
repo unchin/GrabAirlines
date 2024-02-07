@@ -1,5 +1,6 @@
 package com.airlines.service.impl;
 
+import cn.hutool.core.date.BetweenFormatter;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
@@ -17,6 +18,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
@@ -25,6 +29,10 @@ import java.util.stream.Collectors;
 public class JejuAirServiceImpl implements JejuAirService {
 
     public static void main(String[] args) throws InterruptedException {
+        getGrabData();
+    }
+
+    private static void getGrabData() throws InterruptedException {
         DateTime start = DateTime.now();
         log.info("=============== 开始抓取7C航空 ==================" + start);
 
@@ -39,30 +47,16 @@ public class JejuAirServiceImpl implements JejuAirService {
 
         try {
             mockClick(driver, dateStr);
-            grab(driver);
-
-        // 需要往后爬几天，就在这里循环几次
-        for (int i = 1; i < 2; i++) {
-            dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
-            log.info("-------------" + dateStr + "-------------");
-            mockClickNextday(driver);
-            grab(driver);
-        }
-
-            // 修改城市
-            Thread.sleep(2000);
-            mockStationAndDate(driver, dateStr);
-            grab(driver);
         } catch (NoSuchElementException e) {
             log.info("没有找到元素" + e.getMessage());
-        }finally {
+        } finally {
             driver.quit();
-            log.info("=============== 抓取7C航空结束 ==================");
+            // 打印出时间耗时
+            log.info("=============== 抓取7C航空耗时 ==================" + DateUtil.formatBetween(start, DateTime.now(),BetweenFormatter.Level.MINUTE));
         }
-
     }
 
-    private static void mockClickNextday(WebDriver driver) throws InterruptedException {
+    private static void mockClickNextday(WebDriver driver) throws InterruptedException, NoSuchElementException {
         Thread.sleep(1000);
         WebElement nextDay = driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-next']"));
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", nextDay);
@@ -76,7 +70,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         return now.toString("yyyyMMdd");
     }
 
-    private static void mockClick(WebDriver driver, String dateStr) throws InterruptedException {
+    private static void mockClick(WebDriver driver, String dateStr) throws InterruptedException, NoSuchElementException {
         // 点击单程
         Thread.sleep(1000);
         driver.findElement(By.xpath("//li[@data-triptype='OW']")).click();
@@ -84,106 +78,88 @@ public class JejuAirServiceImpl implements JejuAirService {
         mockStationAndDate(driver, dateStr);
     }
 
-    private static void mockStationAndDate(WebDriver driver, String dateStr) throws InterruptedException {
-        // 点击出发地点
-        Thread.sleep(1000);
-        driver.findElement(By.id("spanDepartureDesc")).click();
+    private static void mockStationAndDate(WebDriver driver, String dateStr) throws InterruptedException, NoSuchElementException {
 
-//        boolean notFirst = false;
-//        // 获取出发地点列表
-//        List<String> departureStationCodeList = getStationCodeList(driver);
-//        log.info("出发地点列表：" + departureStationCodeList);
-//        for (String stationCode : departureStationCodeList) {
-//
-//            // 如果不是第一次进入这个循环体，那么需要点击一下出发地点的选择
-//            if (notFirst) {
-//                Thread.sleep(1000);
-//                driver.findElement(By.id("spanArrivalDesc")).click();
-//            }notFirst = true;
-//
-//            // 选择出发地点
-//            Thread.sleep(1000);
-//            log.info("出发地点：" + stationCode);
-//            WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + stationCode + "][data-stationtype='DEP']"));
-//            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
-//
-//            Thread.sleep(1000);
-//            List<String> arrivalStationCodeList = getStationCodeList(driver);
-//            log.info("到达地点列表：" + departureStationCodeList);
-//            for (String arrivalStationCode : arrivalStationCodeList) {
-//                log.info("到达地点：" + arrivalStationCode);
-//
-//                // 如果不是第一次进入这个循环体，那么需要点击一下到达地点的选择
-//                if (notFirst) {
-//                    Thread.sleep(1000);
-//                    driver.findElement(By.id("spanArrivalDesc")).click();
-//                }
-//                notFirst = true;
-//
-//                // 选择到达地点
-//                List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
-//                if (!arrivalStations.isEmpty()) {
-//                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
-//                    mockDateAndSelectClick(driver, dateStr);
-//                    grab(driver);
-//                }
-//            }
-//        }
-            // 获取出发地点列表
-            List<String> departureStationCodeList = getStationCodeList(driver);
-            log.info("出发地点列表：" + departureStationCodeList);
+        // 获取出发地点CODE列表
+        List<String> departureStationCodeList = getStationCodeList(driver, "DEP");
+        log.info("出发地点CODE列表：" + departureStationCodeList);
 
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        for (String departureStationCode : departureStationCodeList) {
 
-            for (String departureStationCode : departureStationCodeList) {
-                log.info("出发地点：" + departureStationCode);
-                // 点击出发地点的选择
-                wait.until(ExpectedConditions.elementToBeClickable(By.id("spanArrivalDesc"))).click();
+            // 选择出发地点CODE
+            driver.findElement(By.id("spanDepartureDesc")).click();
+            Thread.sleep(1000);
+            WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + departureStationCode + "][data-stationtype='DEP']"));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
+            log.info("出发地点CODE：" + departureStationCode);
 
-                // 选择出发地点
-                WebElement departureStation = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("button[data-stationcode='" + departureStationCode + "'][data-stationtype='DEP']")));
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
+            // 获取到达地点CODE列表
+            List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode, departureStationCodeList);
+            for (String arrivalStationCode : arrivalStationCodeList) {
 
-                List<String> arrivalStationCodeList = getStationCodeList(driver);
+                // 选择到达地点CODE
+                driver.findElement(By.id("spanArrivalDesc")).click();
+                Thread.sleep(1000);
+                List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
+                log.info("==============================");
+                log.info("出发地点CODE：" + departureStationCode +" -- 到达地点CODE：" + arrivalStationCode);
 
-                // 过滤掉出发地点
-                arrivalStationCodeList = arrivalStationCodeList.stream().filter(arrivalStationCode -> !arrivalStationCode.equals(departureStationCode)).toList();
+                mockDateAndSelectClick(driver, dateStr);
+                grab(driver);
 
-                log.info("到达地点列表：" + arrivalStationCodeList);
-
-                for (String arrivalStationCode : arrivalStationCodeList) {
-                    log.info("到达地点：" + arrivalStationCode);
-
-                    // 点击到达地点的选择
-                    wait.until(ExpectedConditions.elementToBeClickable(By.id("spanArrivalDesc"))).click();
-
-                    // 选择到达地点
-                    List<WebElement> arrivalStations = wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("button[data-stationcode='" + arrivalStationCode + "'][data-stationtype='ARR']")));
-
-                    if (!arrivalStations.isEmpty()) {
-                        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
-                        mockDateAndSelectClick(driver, dateStr);
-                        grab(driver);
-                    }
+                // 需要往后爬几天，就在这里循环几次
+                for (int i = 1; i < 2; i++) {
+                    dateStr = DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd");
+                    log.info("-------------" + dateStr + "-------------");
+                    mockClickNextday(driver);
+                    grab(driver);
                 }
             }
+        }
+    }
 
+    private static List<String> getArrivalStationCodeList(WebDriver driver, String stationCode, List<String> departureStationCodeList) throws InterruptedException {
+        Thread.sleep(1000);
+        List<String> arrivalStationCodeList = getStationCodeList(driver, "ARR");
 
+        // 过滤掉出发地点CODE
+        arrivalStationCodeList = arrivalStationCodeList.stream().filter(arrivalStationCode -> !arrivalStationCode.equals(stationCode)).toList();
+
+        log.info("到达地点CODE列表：" + departureStationCodeList);
+        return arrivalStationCodeList;
     }
 
     /**
      * 获取地点列表,这里的列表内容是动态的，不同的出发地点对应不同的到达地点
+     *
      * @param driver 浏览器内容
-     * @return 地点列表
+     * @return 地点CODE列表
      */
-    private static List<String> getStationCodeList(WebDriver driver) throws NoSuchElementException{
+    private static List<String> getStationCodeList(WebDriver driver, String status) throws NoSuchElementException, InterruptedException {
 
-        WebElement select = driver.findElement(By.className("main--destination-select"));
-        List<WebElement> departureStationList = select.findElements(By.cssSelector("button[data-stationcode]"));
+        WebElement statusElement;
+        if (status.equals("DEP")) {
+            driver.findElement(By.id("spanDepartureDesc")).click();
+            Thread.sleep(1000);
+            statusElement = driver.findElement(By.id("divDepArea"));
+        } else {
+            driver.findElement(By.id("spanArrivalDesc")).click();
+            Thread.sleep(1000);
+            statusElement = driver.findElement(By.id("divArrArea"));
+        }
+        // divArrArea的上上级
+        WebElement statusElementParent = statusElement.findElement(By.xpath(".."));
+        statusElementParent = statusElementParent.findElement(By.xpath(".."));
 
-        return departureStationList.stream()
-                .map(webElement -> webElement.getAttribute("data-stationcode"))
-                .collect(Collectors.toList());
+        List<WebElement> departureStationList = statusElementParent.findElements(By.cssSelector("button[data-stationcode]"));
+
+        List<String> departureStationCodeList = new ArrayList<>();
+        for (WebElement station : departureStationList) {
+            String stationCode = station.getAttribute("data-stationcode");
+            departureStationCodeList.add(stationCode);
+        }
+        return departureStationCodeList;
     }
 
     private static void mockDateAndSelectClick(WebDriver driver, String dateStr) throws InterruptedException {
@@ -267,128 +243,136 @@ public class JejuAirServiceImpl implements JejuAirService {
     }
 
     private static void grab(WebDriver driver) throws InterruptedException {
-            // 航班日期报价列表
-//        String departureCity = driver.findElement(By.id("moSpanDepartureDesc")).getText();
-            String departureCity = driver.findElement(By.cssSelector("[class = 'txt start']")).getText();
-//        String arrivalCity = driver.findElement(By.id("moSpanArrivalDesc")).getText();
-            String arrivalCity = driver.findElement(By.id("moSpanArrivalDesc")).getText();
-            log.info("出发城市：" + departureCity + " 到达城市：" + arrivalCity);
+        // 航班日期报价列表
+        String departureCity = driver.findElement(By.id("spanDepartureDesc")).getText();
+        String arrivalCity = driver.findElement(By.id("spanArrivalDesc")).getText();
+        log.info(departureCity + " -- " + arrivalCity);
 
-            WebElement active = driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active active']"));
-            String date = active.findElement(By.className("date")).getText();
+        WebElement active = driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active active']"));
+        String date = active.findElement(By.className("date")).getText();
+
+        String price = active.findElement(By.className("price")).getText();
+        if ("-".equals(price)) {
+            // 表示这一天没有航班信息
+            log.info("日期：" + date + " 没有航班信息");
+            return;
+        } else {
             log.info("日期：" + date);
+        }
 
-            String price = active.findElement(By.className("price")).getText();
-            if ("-".equals(price)) {
-                // 表示这一天没有航班信息
-                log.info("日期：" + date + " 没有航班信息");
-                return;
+        String unit = active.findElement(By.className("unit")).getText();
+        String priceTxt = active.findElement(By.className("price_txt")).getText();
+        String priceStr = StrUtil.cleanBlank(priceTxt).replaceAll(",", "");
+        int priceNum = Integer.parseInt(priceStr);
+        log.info("价格：" + priceNum + " " + unit);
+
+        // 最低价机票信息栏
+        WebElement fareList = driver.findElement(By.className("fare-list"));
+        WebElement chip = fareList.findElement(By.cssSelector("[class = 'chip lowest']"));
+        WebElement chips = chip.findElement(By.xpath(".."));
+        WebElement head = chips.findElement(By.xpath(".."));
+        WebElement listSummary = head.findElement(By.xpath(".."));
+        WebElement listItem = listSummary.findElement(By.xpath(".."));
+
+        // 航班号名称
+        WebElement tkNum = listSummary.findElement(By.className("tk-num"));
+        String tkNumText = tkNum.getText();
+        log.info("航班号：" + tkNumText);
+
+        // 开始时间
+        WebElement departureTime = listSummary.findElement(By.cssSelector("[class = 'time-num start']"));
+        String departureTimeText = departureTime.getText();
+        // 将departureTimeText通过换行符拆分为两个字符串
+        String[] departureTimeTextArr = departureTimeText.split("\n");
+        String departureTimeText1 = departureTimeTextArr[0];
+        String departureTimeText2 = departureTimeTextArr[1];
+        String departureDate = departureTime.getAttribute("data-gmt");
+        log.info("出发时间：" + departureTimeText1);
+
+        // 结束时间
+        WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
+        String arrivalTimeText = arrivalTime.getText();
+        String arrivalDate = arrivalTime.getAttribute("data-landingdate");
+        String[] arrivalTimeTextArr = arrivalTimeText.split("\n");
+        String arrivalTimeText1 = arrivalTimeTextArr[0];
+        String arrivalTimeText2 = arrivalTimeTextArr[1];
+        log.info("到达时间：" + arrivalTimeText1);
+
+        log.info(departureTimeText2 + " -- " + arrivalTimeText2);
+
+        // 持续时间
+        WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
+        String durationText = durationTotal.getText();
+        log.info("持续时间：" + durationText);
+
+        // 机票类型
+        WebElement farePareTab = listItem.findElement(By.className("fare-pare-tab"));
+        List<WebElement> gradeBags = farePareTab.findElements(By.cssSelector("[class = 'tab-btn grade-bag']"));
+        gradeBags.forEach(gradeBag -> {
+            // 舱位等级
+            String cabinClass = gradeBag.findElement(By.cssSelector("[class = 'grade fly-bag']")).getText();
+            log.info("舱位等级：" + cabinClass);
+
+            // 剩余座位
+            String remainingSeat = gradeBag.findElement(By.cssSelector("[class = 'remaining-seat']")).getText();
+            log.info("剩余座位：" + remainingSeat);
+        });
+
+
+        List<WebElement> transferFlag = listSummary.findElements(By.cssSelector("[onclick = 'openConnectSection(this);']"));
+        if (transferFlag.isEmpty()) {
+            // 不需要中转
+            log.info("不需要中转");
+        } else {
+            // 中转详情
+            WebElement detail = listSummary.findElement(By.cssSelector("[onclick = 'openConnectSection(this);']"));
+            log.info("中转次数: " + detail.getText());
+
+            mockTransferClick((JavascriptExecutor) driver, listSummary);
+
+            WebElement flightList = driver.findElement(By.className("flight-time__list"));
+
+            // 起飞列表
+            List<WebElement> takeoffList = flightList.findElements(By.cssSelector("[class = 'flight-time__list-item']"));
+            for (WebElement takeoff : takeoffList) {
+                // 记录这是第几次循环
+                int index = takeoffList.indexOf(takeoff) + 1;
+                log.info("第" + index + "次行程");
+
+                String takeoffCity = takeoff.findElement(By.className("title")).getText();
+                String takeoffStation = takeoff.findElement(By.className("title-code")).getText();
+                log.info("起飞城市：" + takeoffCity + " 起飞机场：" + takeoffStation);
+                WebElement info = takeoff.findElement(By.className("info"));
+                List<WebElement> spans = info.findElements(By.cssSelector("span"));
+                String takeoffTime = spans.get(0).getText();
+                String flightNumber = spans.get(1).getText();
+                String duration = takeoff.findElement(By.className("time")).getText();
+                log.info("起飞时间：" + takeoffTime + " 航班号：" + flightNumber + " 持续时间：" + duration);
             }
 
-            String unit = active.findElement(By.className("unit")).getText();
-            String priceTxt = active.findElement(By.className("price_txt")).getText();
-            String priceStr = StrUtil.cleanBlank(priceTxt).replaceAll(",", "");
-            int priceNum = Integer.parseInt(priceStr);
-            log.info("价格：" + priceNum + " " + unit);
+            // 落地列表
+            List<WebElement> landingList = flightList.findElements(By.cssSelector("[class = 'flight-time__list-item via-line']"));
+            for (WebElement landing : landingList) {
+                // 记录这是第几次循环
+                int index = landingList.indexOf(landing) + 1;
+                log.info("第" + index + "次行程");
 
-            // 最低价机票信息栏
-            WebElement fareList = driver.findElement(By.className("fare-list"));
-            WebElement chip = fareList.findElement(By.cssSelector("[class = 'chip lowest']"));
-            WebElement chips = chip.findElement(By.xpath(".."));
-            WebElement head = chips.findElement(By.xpath(".."));
-            WebElement listSummary = head.findElement(By.xpath(".."));
-            WebElement listItem = listSummary.findElement(By.xpath(".."));
-
-            // 航班号名称
-            WebElement tkNum = listSummary.findElement(By.className("tk-num"));
-            String tkNumText = tkNum.getText();
-            log.info("航班号：" + tkNumText);
-
-            // 开始时间
-            WebElement departureTime = listSummary.findElement(By.cssSelector("[class = 'time-num start']"));
-            String departureTimeText = departureTime.getText();
-            String departureDate = departureTime.getAttribute("data-gmt");
-            log.info("出发时间：" + departureDate + " " + departureTimeText);
-
-            // 持续时间
-            WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
-            String durationText = durationTotal.getText();
-            log.info("持续时间：" + durationText);
-
-            // 结束时间
-            WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
-            String arrivalTimeText = arrivalTime.getText();
-            String arrivalDate = arrivalTime.getAttribute("data-landingdate");
-            log.info("到达时间：" + arrivalDate + " " + arrivalTimeText);
-
-            // 机票类型
-            WebElement farePareTab = listItem.findElement(By.className("fare-pare-tab"));
-            List<WebElement> gradeBags = farePareTab.findElements(By.cssSelector("[class = 'tab-btn grade-bag']"));
-            gradeBags.forEach(gradeBag -> {
-                // 舱位等级
-                String cabinClass = gradeBag.findElement(By.cssSelector("[class = 'grade fly-bag']")).getText();
-                log.info("舱位等级：" + cabinClass);
-
-                // 剩余座位
-                String remainingSeat = gradeBag.findElement(By.cssSelector("[class = 'remaining-seat']")).getText();
-                log.info("剩余座位：" + remainingSeat);
-            });
-
-
-            List<WebElement> transferFlag = listSummary.findElements(By.cssSelector("[onclick = 'openConnectSection(this);']"));
-            if (transferFlag.isEmpty()) {
-                // 不需要中转
-                log.info("不需要中转");
-            } else {
-                // 中转详情
-                WebElement detail = listSummary.findElement(By.cssSelector("[onclick = 'openConnectSection(this);']"));
-                log.info("中转次数: " + detail.getText());
-
-                mockTransferClick((JavascriptExecutor) driver, listSummary);
-
-                WebElement flightList = driver.findElement(By.className("flight-time__list"));
-
-                // 起飞列表
-                List<WebElement> takeoffList = flightList.findElements(By.cssSelector("[class = 'flight-time__list-item']"));
-                for (WebElement takeoff : takeoffList) {
-                    // 记录这是第几次循环
-                    int index = takeoffList.indexOf(takeoff) + 1;
-                    log.info("第" + index + "次行程");
-
-                    String takeoffCity = takeoff.findElement(By.className("title")).getText();
-                    String takeoffStation = takeoff.findElement(By.className("title-code")).getText();
-                    log.info("起飞城市：" + takeoffCity + " 起飞机场：" + takeoffStation);
-                    WebElement info = takeoff.findElement(By.className("info"));
-                    List<WebElement> spans = info.findElements(By.cssSelector("span"));
-                    String takeoffTime = spans.get(0).getText();
-                    String flightNumber = spans.get(1).getText();
-                    String duration = takeoff.findElement(By.className("time")).getText();
-                    log.info("起飞时间：" + takeoffTime + " 航班号：" + flightNumber + " 持续时间：" + duration);
-                }
-
-                // 落地列表
-                List<WebElement> landingList = flightList.findElements(By.cssSelector("[class = 'flight-time__list-item via-line']"));
-                for (WebElement landing : landingList) {
-                    // 记录这是第几次循环
-                    int index = landingList.indexOf(landing) + 1;
-                    log.info("第" + index + "次行程");
-
-                    String takeoffCity = landing.findElement(By.className("title")).getText();
-                    String takeoffStation = landing.findElement(By.className("title-code")).getText();
-                    log.info("落地城市：" + takeoffCity + " 落地机场：" + takeoffStation);
-                    WebElement info = landing.findElement(By.className("info"));
-                    List<WebElement> spans = info.findElements(By.cssSelector("span"));
-                    String takeoffTime = spans.get(0).getText();
-                    log.info("落地时间：" + takeoffTime);
-                }
-
-                // 转机等候时间
-                WebElement via = flightList.findElement(By.cssSelector("[class = 'flight-time__list-item via-line via']"));
-                log.info("转机等候时间：" + via.getText());
-
-                // 关闭详情
-                mockCloseClick(driver);
+                String takeoffCity = landing.findElement(By.className("title")).getText();
+                String takeoffStation = landing.findElement(By.className("title-code")).getText();
+                log.info("落地城市：" + takeoffCity + " 落地机场：" + takeoffStation);
+                WebElement info = landing.findElement(By.className("info"));
+                List<WebElement> spans = info.findElements(By.cssSelector("span"));
+                String takeoffTime = spans.get(0).getText();
+                log.info("落地时间：" + takeoffTime);
             }
+
+            // 转机等候时间
+            WebElement via = flightList.findElement(By.cssSelector("[class = 'flight-time__list-item via-line via']"));
+            log.info("转机等候时间：" + via.getText());
+
+            // 关闭详情
+            mockCloseClick(driver);
+        }
     }
 
     private static void mockCloseClick(WebDriver driver) {
