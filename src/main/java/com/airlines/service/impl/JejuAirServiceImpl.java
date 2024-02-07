@@ -15,6 +15,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author: unchin
@@ -29,12 +32,37 @@ public class JejuAirServiceImpl implements JejuAirService {
     public static final String DEP = "DEP";
     public static final String NO_FLIGHT = "-";
     public static final String LINE_FEED = "\n";
+    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) throws InterruptedException {
-        getGrabData();
+        String dateStr = getDateStr();
+        log.info("------------- " + dateStr + "开始抓取 -------------");
+
+        for (int i = 0; i < 10; i++) {
+            int finalI = i;
+            executor.submit(() -> {
+                String date = DateUtil.offsetDay(DateUtil.date(), finalI * 3).toString("yyyyMMdd");
+                try {
+                    getGrabData(date);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+
+        try {
+            // 等待所有任务完成
+            executor.shutdown();
+            if (!executor.awaitTermination(3600, TimeUnit.SECONDS)) {
+                log.warn("线程池未在60秒内完成所有任务");
+            }
+        } catch (InterruptedException e) {
+            log.warn("线程池关闭时被中断", e);
+            Thread.currentThread().interrupt();
+        }
     }
 
-    private static void getGrabData() throws InterruptedException {
+    private static void getGrabData(String dateStr) throws InterruptedException {
         DateTime start = DateTime.now();
         log.info("=============== 开始抓取7C航空 ==================" + start);
 
@@ -43,9 +71,6 @@ public class JejuAirServiceImpl implements JejuAirService {
         driver.get(url);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         driver.manage().window().maximize();
-
-        String dateStr = getDateStr();
-        log.info("------------- " + dateStr + "开始抓取 -------------");
 
         try {
             mockClick(driver, dateStr);
@@ -205,7 +230,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         return refreshPage(driver);
     }
 
-    private static boolean refreshPage(WebDriver driver) throws InterruptedException {
+    private static boolean refreshPage(WebDriver driver) {
         // 最大尝试次数
         int maxAttempts = 15;
         int attempts = 0;
