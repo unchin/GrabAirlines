@@ -214,6 +214,9 @@ public class JejuAirServiceImpl implements JejuAirService {
                 log.info("第" + attempts + "次查询航班信息");
             }
         }
+        if (attempts >= maxAttempts) {
+            log.error("查询航班信息失败");
+        }
     }
 
     private static void refreshResult(WebDriver driver) throws InterruptedException {
