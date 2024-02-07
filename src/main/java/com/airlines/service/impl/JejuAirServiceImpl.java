@@ -23,6 +23,11 @@ import java.util.List;
 @Slf4j
 public class JejuAirServiceImpl implements JejuAirService {
 
+    public static final int NEXT_DAY_NUM = 5;
+    public static final String DEP = "DEP";
+    public static final String NO_FLIGHT = "-";
+    public static final String LINE_FEED = "\n";
+
     public static void main(String[] args) throws InterruptedException {
         getGrabData();
     }
@@ -90,7 +95,7 @@ public class JejuAirServiceImpl implements JejuAirService {
                 mockDateAndSelectClick(driver, dateStr);
                 grab(driver);
                 // 需要往后爬几天，就在这里循环几次
-                for (int i = 1; i < 5; i++) {
+                for (int i = 1; i < NEXT_DAY_NUM; i++) {
                     log.info("-------------" + DateUtil.offsetDay(DateUtil.date(), i).toString("yyyyMMdd") + "-------------");
                     mockClickNextday(driver);
                     grab(driver);
@@ -137,7 +142,7 @@ public class JejuAirServiceImpl implements JejuAirService {
     private static List<String> getStationCodeList(WebDriver driver, String status) throws NoSuchElementException, InterruptedException {
 
         WebElement statusElement;
-        if ("DEP".equals(status)) {
+        if (DEP.equals(status)) {
             driver.findElement(By.id("spanDepartureDesc")).click();
             Thread.sleep(1000);
             statusElement = driver.findElement(By.id("divDepArea"));
@@ -253,7 +258,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         String date = active.findElement(By.className("date")).getText();
 
         String price = active.findElement(By.className("price")).getText();
-        if ("-".equals(price)) {
+        if (NO_FLIGHT.equals(price)) {
             // 表示这一天没有航班信息
             log.info("日期：" + date + " 没有航班信息");
             return;
@@ -289,8 +294,8 @@ public class JejuAirServiceImpl implements JejuAirService {
         String departureTimeText = departureTime.getText();
 
         // 将departureTimeText通过换行符拆分为两个字符串
-        if (departureTimeText.contains("\n")) {
-            String[] departureTimeTextArr = departureTimeText.split("\n");
+        if (departureTimeText.contains(LINE_FEED)) {
+            String[] departureTimeTextArr = departureTimeText.split(LINE_FEED);
             departureTimeText = departureTimeTextArr[0];
             String departureTimeText2 = departureTimeTextArr[1];
             log.info("出发地点：" + departureTimeText2);
@@ -301,8 +306,8 @@ public class JejuAirServiceImpl implements JejuAirService {
         // 结束时间
         WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
         String arrivalTimeText = arrivalTime.getText();
-        if (arrivalTimeText.contains("\n")) {
-            String[] arrivalTimeTextArr = arrivalTimeText.split("\n");
+        if (arrivalTimeText.contains(LINE_FEED)) {
+            String[] arrivalTimeTextArr = arrivalTimeText.split(LINE_FEED);
             arrivalTimeText = arrivalTimeTextArr[0];
             String arrivalTimeText2 = arrivalTimeTextArr[1];
             log.info("到达地点：" + arrivalTimeText2);
