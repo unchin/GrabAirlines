@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -170,6 +171,8 @@ public class JejuAirServiceImpl implements JejuAirService {
             String stationCode = station.getAttribute("data-stationcode");
             departureStationCodeList.add(stationCode);
         }
+        // 将departureStationCodeList的顺序打乱
+        Collections.shuffle(departureStationCodeList);
         return departureStationCodeList;
     }
 
