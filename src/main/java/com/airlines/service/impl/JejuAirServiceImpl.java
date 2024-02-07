@@ -89,7 +89,7 @@ public class JejuAirServiceImpl implements JejuAirService {
             mockClickDepartureStation(driver, departureStationCode);
 
             // 获取到达地点CODE列表
-            List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode, departureStationCodeList);
+            List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode);
             for (String arrivalStationCode : arrivalStationCodeList.subList(0,2)) {
                 mockClickArrivalStation(driver, departureStationCode, arrivalStationCode);
                 mockDateAndSelectClick(driver, dateStr);
@@ -122,14 +122,14 @@ public class JejuAirServiceImpl implements JejuAirService {
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
     }
 
-    private static List<String> getArrivalStationCodeList(WebDriver driver, String stationCode, List<String> departureStationCodeList) throws InterruptedException {
+    private static List<String> getArrivalStationCodeList(WebDriver driver, String departureStationCode) throws InterruptedException {
         Thread.sleep(1000);
         List<String> arrivalStationCodeList = getStationCodeList(driver, "ARR");
 
         // 过滤掉出发地点CODE
-        arrivalStationCodeList = arrivalStationCodeList.stream().filter(arrivalStationCode -> !arrivalStationCode.equals(stationCode)).toList();
+        arrivalStationCodeList = arrivalStationCodeList.stream().filter(arrivalStationCode -> !arrivalStationCode.equals(departureStationCode)).toList();
 
-        log.info("到达地点CODE列表：" + departureStationCodeList);
+        log.info("到达地点CODE列表：" + arrivalStationCodeList);
         return arrivalStationCodeList;
     }
 
@@ -248,7 +248,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
     }
 
-    private static void grab(WebDriver driver) throws InterruptedException {
+    private static void grab(WebDriver driver) throws InterruptedException,NoSuchElementException {
         // 航班日期报价列表
         String departureCity = driver.findElement(By.id("spanDepartureDesc")).getText();
         String arrivalCity = driver.findElement(By.id("spanArrivalDesc")).getText();
@@ -274,7 +274,6 @@ public class JejuAirServiceImpl implements JejuAirService {
 
         // 最低价机票信息栏
         List<WebElement> fareList = driver.findElements(By.className("fare-list"));
-        if (fareList.isEmpty()) {return;}
         WebElement chip = fareList.get(0).findElement(By.cssSelector("[class = 'chip lowest']"));
         WebElement chips = chip.findElement(By.xpath(".."));
         WebElement head = chips.findElement(By.xpath(".."));
