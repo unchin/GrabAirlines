@@ -278,8 +278,12 @@ public class JejuAirServiceImpl implements JejuAirService {
             log.info("没有最低价机票信息");
             return;
         }
-        WebElement chip = fareList.get(0).findElement(By.cssSelector("[class = 'chip lowest']"));
-        WebElement chips = chip.findElement(By.xpath(".."));
+        List<WebElement> chipList = fareList.get(0).findElements(By.cssSelector("[class = 'chip lowest']"));
+        if (chipList.isEmpty()) {
+            log.info("没有最低价机票信息");
+            return;
+        }
+        WebElement chips = chipList.get(0).findElement(By.xpath(".."));
         WebElement head = chips.findElement(By.xpath(".."));
         WebElement listSummary = head.findElement(By.xpath(".."));
         WebElement listItem = listSummary.findElement(By.xpath(".."));
