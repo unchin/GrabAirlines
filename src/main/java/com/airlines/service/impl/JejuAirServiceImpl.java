@@ -52,7 +52,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         } finally {
             driver.quit();
             // 打印出时间耗时
-            log.info("=============== 抓取7C航空耗时 ==================" + DateUtil.formatBetween(start, DateTime.now(),BetweenFormatter.Level.MINUTE));
+            log.info("=============== 抓取7C航空耗时 ==================" + DateUtil.formatBetween(start, DateTime.now(), BetweenFormatter.Level.MINUTE));
         }
     }
 
@@ -92,7 +92,9 @@ public class JejuAirServiceImpl implements JejuAirService {
             List<String> arrivalStationCodeList = getArrivalStationCodeList(driver, departureStationCode);
             for (String arrivalStationCode : arrivalStationCodeList) {
                 mockClickArrivalStation(driver, departureStationCode, arrivalStationCode);
-                mockDateAndSelectClick(driver, dateStr);
+                boolean flag = mockDateAndSelectClick(driver, dateStr);
+                // 如果 flag 为 false，说明没有航班，直接跳过
+                if (!flag) {continue;}
                 grab(driver);
                 // 需要往后爬几天，就在这里循环几次
                 for (int i = 1; i < NEXT_DAY_NUM; i++) {
@@ -111,7 +113,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
         log.info("==============================");
-        log.info("出发地点CODE：" + departureStationCode +" -- 到达地点CODE：" + arrivalStationCode);
+        log.info("出发地点CODE：" + departureStationCode + " -- 到达地点CODE：" + arrivalStationCode);
     }
 
     private static void mockClickDepartureStation(WebDriver driver, String departureStationCode) throws InterruptedException {
@@ -165,7 +167,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         return departureStationCodeList;
     }
 
-    private static void mockDateAndSelectClick(WebDriver driver, String dateStr) throws InterruptedException {
+    private static boolean mockDateAndSelectClick(WebDriver driver, String dateStr) throws InterruptedException {
         // 选择日历组件
         Thread.sleep(1000);
         List<WebElement> oneDateList = driver.findElements(By.xpath("//span[@aria-label=" + dateStr + "]"));
@@ -190,33 +192,24 @@ public class JejuAirServiceImpl implements JejuAirService {
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", searchFlight);
         Thread.sleep(3000);
 
-        refreshPage(driver);
+        return refreshPage(driver);
     }
 
-    private static void refreshPage(WebDriver driver) throws InterruptedException {
+    private static boolean refreshPage(WebDriver driver) throws InterruptedException {
         // 最大尝试次数
         int maxAttempts = 15;
         int attempts = 0;
         while (attempts < maxAttempts) {
-            try {
-                // 尝试找到有效的机票信息列表
-                driver.findElement(By.className("air-flight-list"));
-                break;
-            } catch (org.openqa.selenium.NoSuchElementException e) {
-                // 元素未找到的异常处理
-
-                // 刷新页面
-                Thread.sleep(1000);
-                driver.navigate().refresh();
-
-                // 增加尝试次数
-                attempts++;
-                log.info("第" + attempts + "次查询航班信息");
+            List<WebElement> list = driver.findElements(By.className("air-flight-list"));
+            if (!list.isEmpty()) {
+                break; // 成功找到元素，无需刷新
             }
+            // 刷新页面
+            driver.navigate().refresh();
+            attempts++;
+            log.info("第" + attempts + "次查询航班信息");
         }
-        if (attempts >= maxAttempts) {
-            log.error("查询航班信息失败");
-        }
+        return attempts != maxAttempts;
     }
 
     private static void refreshResult(WebDriver driver) throws InterruptedException {
@@ -251,7 +244,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
     }
 
-    private static void grab(WebDriver driver) throws InterruptedException,NoSuchElementException {
+    private static void grab(WebDriver driver) throws InterruptedException, NoSuchElementException {
         // 航班日期报价列表
         String departureCity = driver.findElement(By.id("spanDepartureDesc")).getText();
         String arrivalCity = driver.findElement(By.id("spanArrivalDesc")).getText();
