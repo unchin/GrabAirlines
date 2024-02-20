@@ -1,19 +1,28 @@
 package com.airlines.util;
 
 import cn.hutool.core.date.DateUtil;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.jni.Pool;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+import java.util.concurrent.*;
 
 @Slf4j
 public class GrabUtil {
 
+    int nThreads = Runtime.getRuntime().availableProcessors();
+    ThreadFactory namedThreadFactory = new ThreadFactoryBuilder()
+            .setNameFormat("demo-pool-%d").build();
+
+    ExecutorService pool = new ThreadPoolExecutor(5, 200,
+            0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<Runnable>(1024), namedThreadFactory, new ThreadPoolExecutor.AbortPolicy());
+
     private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) throws InterruptedException {
+
+
         for (int i = 0; i < 10; i++) {
             int finalI = i;
             executor.submit(() -> {
