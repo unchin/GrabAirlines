@@ -1,5 +1,8 @@
 package com.airlines.service;
 
+import com.airlines.entity.SearchAirticketsInput;
+import com.airlines.entity.SearchAirticketsPriceDetail;
+
 public interface JejuAirService {
 
     /**
@@ -10,5 +13,5 @@ public interface JejuAirService {
     /**
      * 搜索指定航空票价
      */
-//    String getJejuAir(String keyword);
+    SearchAirticketsPriceDetail searchAirticketsPriceDetail(SearchAirticketsInput searchAirticketsInput);
 }

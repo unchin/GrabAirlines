@@ -3,7 +3,12 @@ package com.airlines.service.impl;
 import cn.hutool.core.date.BetweenFormatter;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.StrUtil;
+import com.airlines.entity.SearchAirticketsInput;
+import com.airlines.entity.SearchAirticketsInputSegment;
+import com.airlines.entity.SearchAirticketsPriceDetail;
+import com.airlines.entity.SearchAirticketsSegment;
 import com.airlines.service.JejuAirService;
 import com.airlines.util.SeleniumUtil;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -13,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,78 +34,20 @@ import java.util.concurrent.*;
 @Slf4j
 public class JejuAirServiceImpl implements JejuAirService {
 
-    public static final int NEXT_DAY_NUM = 5;
+    public static final int NEXT_DAY_NUM = 3;
     public static final String DEP = "DEP";
     public static final String NO_FLIGHT = "-";
     public static final String LINE_FEED = "\n";
 
-    /**
-     * 自定义线程名称,方便的出错的时候溯源
-     */
-    private static ThreadFactory namedThreadFactory = new ThreadFactoryBuilder().setNameFormat("test-pool-%d").build();
-
-    /**
-     * corePoolSize    线程池核心池的大小
-     * maximumPoolSize 线程池中允许的最大线程数量
-     * keepAliveTime   当线程数大于核心时，此为终止前多余的空闲线程等待新任务的最长时间
-     * unit            keepAliveTime 的时间单位
-     * workQueue       用来储存等待执行任务的队列
-     * threadFactory   创建线程的工厂类
-     * handler         拒绝策略类,当线程池数量达到上线并且workQueue队列长度达到上限时就需要对到来的任务做拒绝处理
-     */
-    private static ExecutorService service = new ThreadPoolExecutor(
-            4,
-            40,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>(1024),
-            namedThreadFactory,
-            new ThreadPoolExecutor.AbortPolicy()
-    );
-
-    /**
-     * 获取线程池
-     * @return 线程池
-     */
-    public static ExecutorService getEs() {
-        return service;
-    }
-
-    /**
-     * 使用线程池创建线程并异步执行任务
-     * @param r 任务
-     */
-    public static void newTask(Runnable r) {
-        service.execute(r);
-    }
-
-    private static final ExecutorService executor = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) throws InterruptedException {
         String dateStr = getDateStr();
         log.info("------------- " + dateStr + "开始抓取 -------------");
-
-        for (int i = 0; i < 10; i++) {
-            int finalI = i;
-            executor.submit(() -> {
-                String date = DateUtil.offsetDay(DateUtil.date(), finalI * 3).toString("yyyyMMdd");
-                try {
-                    getGrabData(date);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-
         try {
-            // 等待所有任务完成
-            executor.shutdown();
-            if (!executor.awaitTermination(3600, TimeUnit.SECONDS)) {
-                log.warn("线程池未在60秒内完成所有任务");
-            }
+            getGrabData(dateStr);
         } catch (InterruptedException e) {
-            log.warn("线程池关闭时被中断", e);
-            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+
         }
     }
 
@@ -307,7 +256,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         return attempts != maxAttempts;
     }
 
-    private static void mockReclick(WebDriver driver) throws InterruptedException {
+    private static void  mockReclick(WebDriver driver) throws InterruptedException {
         List<WebElement> activeNotList = driver.findElements(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active']"));
         if (activeNotList.isEmpty()) {
             return;
@@ -317,7 +266,11 @@ public class JejuAirServiceImpl implements JejuAirService {
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
     }
 
-    private static void grab(WebDriver driver) throws InterruptedException, NoSuchElementException {
+    private static SearchAirticketsSegment grab(WebDriver driver) throws InterruptedException, NoSuchElementException {
+
+        SearchAirticketsSegment result = new SearchAirticketsSegment();
+        result.setCarrier("7C");
+
         // 航班日期报价列表
         String departureCity = driver.findElement(By.id("spanDepartureDesc")).getText();
         String arrivalCity = driver.findElement(By.id("spanArrivalDesc")).getText();
@@ -330,7 +283,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         if (NO_FLIGHT.equals(price)) {
             // 表示这一天没有航班信息
             log.info("日期：" + date + " 没有航班信息");
-            return;
+            return result;
         } else {
             log.info("日期：" + date);
         }
@@ -345,12 +298,12 @@ public class JejuAirServiceImpl implements JejuAirService {
         List<WebElement> fareList = driver.findElements(By.className("fare-list"));
         if (fareList.isEmpty()) {
             log.info("没有最低价机票信息");
-            return;
+            return result;
         }
         List<WebElement> chipList = fareList.get(0).findElements(By.cssSelector("[class = 'chip lowest']"));
         if (chipList.isEmpty()) {
             log.info("没有最低价机票信息");
-            return;
+            return result;
         }
         WebElement chips = chipList.get(0).findElement(By.xpath(".."));
         WebElement head = chips.findElement(By.xpath(".."));
@@ -361,6 +314,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         WebElement tkNum = listSummary.findElement(By.className("tk-num"));
         String tkNumText = tkNum.getText();
         log.info("航班号：" + tkNumText);
+        result.setFlightNumber(tkNumText);
 
         // 开始时间
         WebElement departureTime = listSummary.findElement(By.cssSelector("[class = 'time-num start']"));
@@ -375,6 +329,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         }
 
         log.info("出发时间：" + departureTimeText);
+        result.setDepDate(departureTimeText);
 
         // 结束时间
         WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
@@ -386,7 +341,7 @@ public class JejuAirServiceImpl implements JejuAirService {
             log.info("到达地点：" + arrivalTimeText2);
         }
         log.info("到达时间：" + arrivalTimeText);
-
+        result.setArrDate(arrivalTimeText);
 
         // 持续时间
         WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
@@ -403,7 +358,8 @@ public class JejuAirServiceImpl implements JejuAirService {
         gradeBags.forEach(gradeBag -> {
             // 舱位等级
             String cabinClass = gradeBag.findElement(By.cssSelector("[class = 'grade fly-bag']")).getText();
-            log.info("舱位等级：" + cabinClass);
+            log.info("套餐等级：" + cabinClass);
+
 
             // 剩余座位
             String remainingSeat = gradeBag.findElement(By.cssSelector("[class = 'remaining-seat']")).getText();
@@ -462,9 +418,14 @@ public class JejuAirServiceImpl implements JejuAirService {
             WebElement via = flightList.findElement(By.cssSelector("[class = 'flight-time__list-item via-line via']"));
             log.info("转机等候时间：" + via.getText());
 
+            // 经停地code
+            String viaStation = landingList.get(0).findElement(By.className("title-code")).getText();
+            result.setStopCities(viaStation);
+
             // 关闭详情
             mockCloseClick(driver);
         }
+        return result;
     }
 
     private static void mockCloseClick(WebDriver driver) {
@@ -479,4 +440,66 @@ public class JejuAirServiceImpl implements JejuAirService {
         Thread.sleep(1000);
     }
 
+    @Override
+    public SearchAirticketsPriceDetail searchAirticketsPriceDetail(SearchAirticketsInput searchAirticketsInput) {
+        DateTime start = DateTime.now();
+
+        Integer adultNum = searchAirticketsInput.getAdultNum();
+        // 最多9个成人
+        if (adultNum > 9) {
+            adultNum = 9;
+        }
+
+        Integer childNum = searchAirticketsInput.getChildNum();
+        // 最多9个儿童
+        if (childNum > 9) {
+            childNum = 9;
+        }
+
+        Integer tripType = searchAirticketsInput.getTripType();
+        List<SearchAirticketsInputSegment> fromSegments = searchAirticketsInput.getFromSegments();
+        List<SearchAirticketsInputSegment> retSegments = searchAirticketsInput.getRetSegments();
+
+        List<SearchAirticketsSegment> fromSegmentsList = new ArrayList<>();
+        fromSegments.forEach(fromSegment -> {
+            String depCityCode = fromSegment.getDepCityCode();
+            String arrCityCode = fromSegment.getArrCityCode();
+            LocalDate depDate = fromSegment.getDepDate();
+
+            // 将depDate格式化
+            String dateStr = depDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+            String url = "https://www.jejuair.net/zh-cn/main/base/index.do";
+            WebDriver driver = SeleniumUtil.getWebDriver();
+            driver.get(url);
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+            driver.manage().window().maximize();
+
+            try {
+                // 点击单程
+                Thread.sleep(1000);
+                driver.findElement(By.xpath("//li[@data-triptype='OW']")).click();
+
+                mockClickDepartureStation(driver, depCityCode);
+                mockClickArrivalStation(driver, depCityCode, arrCityCode);
+                mockDateAndSelectClick(driver, dateStr);
+                SearchAirticketsSegment searchAirticketsSegment = grab(driver);
+                searchAirticketsSegment.setDepAirport(depCityCode);
+                searchAirticketsSegment.setArrAirport(arrCityCode);
+                fromSegmentsList.add(searchAirticketsSegment);
+            } catch (NoSuchElementException | InterruptedException e) {
+                log.info("没有找到元素" + e.getMessage());
+            }finally {
+                driver.quit();
+                // 打印出时间耗时
+                log.info("=============== 抓取7C航空耗时 ==================" + DateUtil.formatBetween(start, DateTime.now(), BetweenFormatter.Level.MINUTE));
+            }
+        });
+
+        SearchAirticketsPriceDetail result = new SearchAirticketsPriceDetail();
+        result.setRateCode(UUID.fastUUID().toString());
+        result.setFromSegments(fromSegmentsList);
+
+        return result;
+    }
 }
