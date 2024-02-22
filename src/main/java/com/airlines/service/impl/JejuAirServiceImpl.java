@@ -5,13 +5,13 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.StrUtil;
-import com.airlines.entity.SearchAirticketsInput;
-import com.airlines.entity.SearchAirticketsInputSegment;
-import com.airlines.entity.SearchAirticketsPriceDetail;
-import com.airlines.entity.SearchAirticketsSegment;
 import com.airlines.service.JejuAirService;
 import com.airlines.util.SeleniumUtil;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.heytrip.common.domain.SearchAirticketsInput;
+import com.heytrip.common.domain.SearchAirticketsInputSegment;
+import com.heytrip.common.domain.SearchAirticketsPriceDetail;
+import com.heytrip.common.domain.SearchAirticketsSegment;
+import com.heytrip.common.enums.CabinClass;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.*;
 import org.springframework.stereotype.Service;
@@ -19,11 +19,11 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
 
 /**
  * @author: unchin
@@ -38,6 +38,7 @@ public class JejuAirServiceImpl implements JejuAirService {
     public static final String DEP = "DEP";
     public static final String NO_FLIGHT = "-";
     public static final String LINE_FEED = "\n";
+    public static final String ADD_DAY = "+1日";
 
 
     public static void main(String[] args) throws InterruptedException {
@@ -256,7 +257,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         return attempts != maxAttempts;
     }
 
-    private static void  mockReclick(WebDriver driver) throws InterruptedException {
+    private static void mockReclick(WebDriver driver) throws InterruptedException {
         List<WebElement> activeNotList = driver.findElements(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active']"));
         if (activeNotList.isEmpty()) {
             return;
@@ -268,51 +269,39 @@ public class JejuAirServiceImpl implements JejuAirService {
 
     private static SearchAirticketsSegment grab(WebDriver driver) throws InterruptedException, NoSuchElementException {
 
+        if (!checkActive(driver)) {
+            return null;
+        }
+
         SearchAirticketsSegment result = new SearchAirticketsSegment();
         result.setCarrier("7C");
+        result.setCabin("Y");
+        result.setCabinClass(CabinClass.EconomyClass.getType());
 
-        // 航班日期报价列表
         String departureCity = driver.findElement(By.id("spanDepartureDesc")).getText();
         String arrivalCity = driver.findElement(By.id("spanArrivalDesc")).getText();
         log.info(departureCity + " -- " + arrivalCity);
 
+        String depDateStr = getDepDate(driver);
+        log.info("日期：" + LocalDate.parse(depDateStr, DateTimeFormatter.ofPattern("yyyy.MM.dd")));
+
+
+
+
         WebElement active = driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active active']"));
-        String date = active.findElement(By.className("date")).getText();
-
-        String price = active.findElement(By.className("price")).getText();
-        if (NO_FLIGHT.equals(price)) {
-            // 表示这一天没有航班信息
-            log.info("日期：" + date + " 没有航班信息");
-            return result;
-        } else {
-            log.info("日期：" + date);
-        }
-
         String unit = active.findElement(By.className("unit")).getText();
         String priceTxt = active.findElement(By.className("price_txt")).getText();
         String priceStr = StrUtil.cleanBlank(priceTxt).replaceAll(",", "");
         BigDecimal priceNum = new BigDecimal(priceStr);
         log.info("价格：" + priceNum + " " + unit);
 
-        // 最低价机票信息栏
         List<WebElement> fareList = driver.findElements(By.className("fare-list"));
-        if (fareList.isEmpty()) {
-            log.info("没有最低价机票信息");
-            return result;
-        }
         List<WebElement> chipList = fareList.get(0).findElements(By.cssSelector("[class = 'chip lowest']"));
-        if (chipList.isEmpty()) {
-            log.info("没有最低价机票信息");
-            return result;
-        }
         WebElement chips = chipList.get(0).findElement(By.xpath(".."));
         WebElement head = chips.findElement(By.xpath(".."));
         WebElement listSummary = head.findElement(By.xpath(".."));
-        WebElement listItem = listSummary.findElement(By.xpath(".."));
 
-        // 航班号名称
-        WebElement tkNum = listSummary.findElement(By.className("tk-num"));
-        String tkNumText = tkNum.getText();
+        String tkNumText = getTkNumText(listSummary);
         log.info("航班号：" + tkNumText);
         result.setFlightNumber(tkNumText);
 
@@ -328,8 +317,11 @@ public class JejuAirServiceImpl implements JejuAirService {
             log.info("出发地点：" + departureTimeText2);
         }
 
-        log.info("出发时间：" + departureTimeText);
-        result.setDepDate(departureTimeText);
+
+        String depDateTimeStr = depDateStr + departureTimeText;
+        LocalDateTime depDateTime = LocalDateTime.parse(depDateTimeStr, DateTimeFormatter.ofPattern("yyyy.MM.ddHH:mm"));
+        log.info("出发时间：" + depDateTime);
+        result.setDepDate(depDateTime);
 
         // 结束时间
         WebElement arrivalTime = listSummary.findElement(By.cssSelector("[class = 'time-num target']"));
@@ -340,8 +332,18 @@ public class JejuAirServiceImpl implements JejuAirService {
             String arrivalTimeText2 = arrivalTimeTextArr[1];
             log.info("到达地点：" + arrivalTimeText2);
         }
-        log.info("到达时间：" + arrivalTimeText);
-        result.setArrDate(arrivalTimeText);
+        LocalDateTime arrDateTime;
+        if (arrivalTimeText.contains(ADD_DAY)) {
+            arrivalTimeText = arrivalTimeText.replace(ADD_DAY, "");
+            String arrDate = depDateStr + arrivalTimeText;
+            arrDateTime = LocalDateTime.parse(arrDate, DateTimeFormatter.ofPattern("yyyy.MM.ddHH:mm"));
+            arrDateTime = arrDateTime.plusDays(1);
+        } else {
+            String arrDate = depDateStr + arrivalTimeText;
+            arrDateTime = LocalDateTime.parse(arrDate, DateTimeFormatter.ofPattern("yyyy.MM.ddHH:mm"));
+        }
+        log.info("到达时间：" + arrDateTime);
+        result.setArrDate(arrDateTime);
 
         // 持续时间
         WebElement durationTotal = listSummary.findElement(By.cssSelector("[class = 'moving-time']"));
@@ -351,21 +353,6 @@ public class JejuAirServiceImpl implements JejuAirService {
             durationText = arrivalTimeTextArr[0];
         }
         log.info("持续时间：" + durationText);
-
-        // 机票类型
-        WebElement farePareTab = listItem.findElement(By.className("fare-pare-tab"));
-        List<WebElement> gradeBags = farePareTab.findElements(By.cssSelector("[class = 'tab-btn grade-bag']"));
-        gradeBags.forEach(gradeBag -> {
-            // 舱位等级
-            String cabinClass = gradeBag.findElement(By.cssSelector("[class = 'grade fly-bag']")).getText();
-            log.info("套餐等级：" + cabinClass);
-
-
-            // 剩余座位
-            String remainingSeat = gradeBag.findElement(By.cssSelector("[class = 'remaining-seat']")).getText();
-            log.info("剩余座位：" + remainingSeat);
-        });
-
 
         List<WebElement> transferFlag = listSummary.findElements(By.cssSelector("[onclick = 'openConnectSection(this);']"));
         if (transferFlag.isEmpty()) {
@@ -428,6 +415,40 @@ public class JejuAirServiceImpl implements JejuAirService {
         return result;
     }
 
+    private static boolean checkActive(WebDriver driver) {
+        WebElement active = driver.findElement(By.cssSelector("[class = 'air-flight-slide swiper-slide swiper-slide-active active']"));
+        String price = active.findElement(By.className("price")).getText();
+        if (NO_FLIGHT.equals(price)) {
+            log.info("没有航班信息");
+            return false;
+        }
+
+        List<WebElement> fareList = driver.findElements(By.className("fare-list"));
+        if (fareList.isEmpty()) {
+            log.info("没有最低价机票信息");
+            return false;
+        }
+        List<WebElement> chipList = fareList.get(0).findElements(By.cssSelector("[class = 'chip lowest']"));
+        if (chipList.isEmpty()) {
+            log.info("没有最低价机票信息");
+            return false;
+        }
+        return true;
+    }
+
+    private static String getDepDate(WebDriver driver) {
+        String btnDatePicker = driver.findElement(By.id("btnDatePicker")).getText();
+        String departureTimeText10 = btnDatePicker.substring(0, 10);
+        return departureTimeText10;
+    }
+
+    private static String getTkNumText(WebElement listSummary) {
+        // 航班号名称
+        WebElement tkNum = listSummary.findElement(By.className("tk-num"));
+        String tkNumText = tkNum.getText();
+        return tkNumText;
+    }
+
     private static void mockCloseClick(WebDriver driver) {
         List<WebElement> closes = driver.findElements(By.className("modal__close"));
         closes.get(closes.size() - 1).click();
@@ -460,7 +481,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         List<SearchAirticketsInputSegment> fromSegments = searchAirticketsInput.getFromSegments();
         List<SearchAirticketsInputSegment> retSegments = searchAirticketsInput.getRetSegments();
 
-        List<SearchAirticketsSegment> fromSegmentsList =  getFromSegmentsList(fromSegments);
+        List<SearchAirticketsSegment> fromSegmentsList = getFromSegmentsList(fromSegments);
         SearchAirticketsPriceDetail result = new SearchAirticketsPriceDetail();
         result.setRateCode(UUID.fastUUID().toString());
         result.setFromSegments(fromSegmentsList);
@@ -498,7 +519,7 @@ public class JejuAirServiceImpl implements JejuAirService {
                 fromSegmentsList.add(searchAirticketsSegment);
             } catch (NoSuchElementException | InterruptedException e) {
                 log.info("没有找到元素" + e.getMessage());
-            }finally {
+            } finally {
                 driver.quit();
             }
         });

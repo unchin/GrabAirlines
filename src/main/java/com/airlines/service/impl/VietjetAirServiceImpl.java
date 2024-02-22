@@ -1,9 +1,6 @@
 package com.airlines.service.impl;
 
 import cn.hutool.core.date.DateTime;
-import cn.hutool.core.date.DateUtil;
-import com.airlines.entity.SearchAirticketsInput;
-import com.airlines.entity.SearchAirticketsPriceDetail;
 import com.airlines.service.VietjetAirService;
 import com.airlines.util.SeleniumUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +9,8 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.springframework.stereotype.Service;
+import com.heytrip.common.domain.SearchAirticketsInput;
+import com.heytrip.common.domain.SearchAirticketsPriceDetail;
 
 import java.time.Duration;
 import java.util.List;

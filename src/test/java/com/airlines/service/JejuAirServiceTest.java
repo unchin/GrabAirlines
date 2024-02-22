@@ -1,16 +1,17 @@
 package com.airlines.service;
 
-import com.airlines.entity.SearchAirticketsInput;
-import com.airlines.entity.SearchAirticketsInputSegment;
-import com.airlines.entity.SearchAirticketsPriceDetail;
+import com.heytrip.common.domain.SearchAirticketsInput;
+import com.heytrip.common.domain.SearchAirticketsInputSegment;
+import com.heytrip.common.domain.SearchAirticketsPriceDetail;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 
@@ -41,5 +42,14 @@ class JejuAirServiceTest {
 
         SearchAirticketsPriceDetail searchAirticketsPriceDetail = jejuAirService.searchAirticketsPriceDetail(searchAirticketsInput);
         log.info(JSON.toJSONString(searchAirticketsPriceDetail));
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        String s = "2024.02.2221:25";
+        // 将这种格式的s转换成时间格式
+        LocalDateTime localDate = LocalDateTime.parse(s, DateTimeFormatter.ofPattern("yyyy.MM.ddHH:mm"));
+        // localDate加一天
+        localDate = localDate.plusDays(1);
+        log.info("==========="+localDate.toString());
     }
 }

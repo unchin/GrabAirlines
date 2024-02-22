@@ -1,7 +1,7 @@
 package com.airlines.controller;
 
-import com.airlines.entity.SearchAirticketsInput;
 import com.airlines.service.VietjetAirService;
+import com.heytrip.common.domain.SearchAirticketsInput;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

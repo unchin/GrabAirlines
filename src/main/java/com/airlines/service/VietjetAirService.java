@@ -1,8 +1,7 @@
 package com.airlines.service;
 
-import com.airlines.entity.SearchAirticketsInput;
-import com.airlines.entity.SearchAirticketsPriceDetail;
-
+import com.heytrip.common.domain.SearchAirticketsInput;
+import com.heytrip.common.domain.SearchAirticketsPriceDetail;
 public interface VietjetAirService {
 
     SearchAirticketsPriceDetail searchAirticketsPriceDetail(SearchAirticketsInput searchAirticketsInput);
