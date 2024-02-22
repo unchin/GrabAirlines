@@ -2,6 +2,9 @@ package com.airlines.service.impl;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import com.airlines.entity.SearchAirticketsInput;
+import com.airlines.entity.SearchAirticketsPriceDetail;
+import com.airlines.service.VietjetAirService;
 import com.airlines.util.SeleniumUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -16,7 +19,7 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class VietjetAirServiceImpl {
+public class VietjetAirServiceImpl implements VietjetAirService {
 
     public static void main(String[] args) throws InterruptedException {
         DateTime start = DateTime.now();
@@ -71,5 +74,11 @@ public class VietjetAirServiceImpl {
 
         driver.quit();
         log.info("=============== 抓取VJ航空结束 ==================");
+    }
+
+    @Override
+    public SearchAirticketsPriceDetail searchAirticketsPriceDetail(SearchAirticketsInput searchAirticketsInput) {
+
+        return null;
     }
 }

@@ -460,6 +460,15 @@ public class JejuAirServiceImpl implements JejuAirService {
         List<SearchAirticketsInputSegment> fromSegments = searchAirticketsInput.getFromSegments();
         List<SearchAirticketsInputSegment> retSegments = searchAirticketsInput.getRetSegments();
 
+        List<SearchAirticketsSegment> fromSegmentsList =  getFromSegmentsList(fromSegments);
+        SearchAirticketsPriceDetail result = new SearchAirticketsPriceDetail();
+        result.setRateCode(UUID.fastUUID().toString());
+        result.setFromSegments(fromSegmentsList);
+
+        return result;
+    }
+
+    private static List<SearchAirticketsSegment> getFromSegmentsList(List<SearchAirticketsInputSegment> fromSegments) {
         List<SearchAirticketsSegment> fromSegmentsList = new ArrayList<>();
         fromSegments.forEach(fromSegment -> {
             String depCityCode = fromSegment.getDepCityCode();
@@ -491,15 +500,8 @@ public class JejuAirServiceImpl implements JejuAirService {
                 log.info("没有找到元素" + e.getMessage());
             }finally {
                 driver.quit();
-                // 打印出时间耗时
-                log.info("=============== 抓取7C航空耗时 ==================" + DateUtil.formatBetween(start, DateTime.now(), BetweenFormatter.Level.MINUTE));
             }
         });
-
-        SearchAirticketsPriceDetail result = new SearchAirticketsPriceDetail();
-        result.setRateCode(UUID.fastUUID().toString());
-        result.setFromSegments(fromSegmentsList);
-
-        return result;
+        return fromSegmentsList;
     }
 }

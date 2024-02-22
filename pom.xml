@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.2</version>
+        <version>3.2.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.airlines</groupId>
@@ -52,7 +52,28 @@
             <artifactId>selenium-java</artifactId>
             <version>4.17.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.heytrip</groupId>
+            <artifactId>airline-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>nexus-airline</id>
+            <name>nexus repository</name>
+            <url>http://120.79.211.194:8081/repository/lccairline-group/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+
 
     <build>
         <plugins>
