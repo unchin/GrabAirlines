@@ -7,12 +7,16 @@ import com.alibaba.fastjson2.JSON;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Slf4j
@@ -45,11 +49,11 @@ class JejuAirServiceTest {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        String s = "2024.02.2221:25";
-        // 将这种格式的s转换成时间格式
-        LocalDateTime localDate = LocalDateTime.parse(s, DateTimeFormatter.ofPattern("yyyy.MM.ddHH:mm"));
-        // localDate加一天
-        localDate = localDate.plusDays(1);
-        log.info("==========="+localDate.toString());
+        String benefitText = "可以托运行李15公斤";
+        String regEx="[^0-9]";
+        Pattern p = Pattern.compile(regEx);
+        Matcher m = p.matcher(benefitText);
+        String s = m.replaceAll("").trim();
+        System.out.println(s);
     }
 }

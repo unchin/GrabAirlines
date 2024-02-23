@@ -43,7 +43,8 @@ public class SeleniumUtil {
     public static WebDriver getWebDriver() {
         //设置chrome选项
         ChromeOptions options = new ChromeOptions();
-//        options.addArguments("--headless");//开启无头模式
+        //开启无头模式
+//        options.addArguments("--headless");
         //禁止gpu渲染
         options.addArguments("--disable-gpu");
         //关闭沙盒模式
@@ -55,7 +56,6 @@ public class SeleniumUtil {
         options.addArguments("disable-blink-features=AutomationControlled");
 
         options.addArguments("--user-agent=Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
-//        options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36");
 
         return new ChromeDriver(options);
     }
