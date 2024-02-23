@@ -129,20 +129,29 @@ public class JejuAirServiceImpl implements JejuAirService {
         }
     }
 
-    private static void mockClickArrivalStation(WebDriver driver, String departureStationCode, String arrivalStationCode) throws InterruptedException {
-        // 选择到达地点CODE
+    /**
+     * 选择到达地点CODE
+     * @param driver 浏览器驱动
+     * @param departureStationCode 出发地点CODE
+     * @param arrivalStationCode 到达地点CODE
+     * @return 是否成功选择到达地点CODE
+     */
+    private static boolean mockClickArrivalStation(WebDriver driver, String departureStationCode, String arrivalStationCode){
         driver.findElement(By.id("spanArrivalDesc")).click();
-        Thread.sleep(1000);
         List<WebElement> arrivalStations = driver.findElements(By.cssSelector("button[data-stationcode=" + arrivalStationCode + "][data-stationtype='ARR']"));
+        if (arrivalStations.isEmpty()) {
+            log.info("没有找到到达地点CODE：" + arrivalStationCode);
+            return false;
+        }
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", arrivalStations.get(0));
         log.info("==============================");
         log.info("出发地点CODE：" + departureStationCode + " -- 到达地点CODE：" + arrivalStationCode);
+        return true;
     }
 
-    private static void mockClickDepartureStation(WebDriver driver, String departureStationCode) throws InterruptedException {
+    private static void mockClickDepartureStation(WebDriver driver, String departureStationCode){
         // 选择出发地点CODE
         driver.findElement(By.id("spanDepartureDesc")).click();
-        Thread.sleep(1000);
         WebElement departureStation = driver.findElement(By.cssSelector("button[data-stationcode = " + departureStationCode + "][data-stationtype='DEP']"));
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", departureStation);
     }
@@ -192,9 +201,8 @@ public class JejuAirServiceImpl implements JejuAirService {
         return departureStationCodeList;
     }
 
-    private static boolean mockDateAndSelectClick(WebDriver driver, String dateStr) throws InterruptedException {
+    private static boolean mockDateAndSelectClick(WebDriver driver, String dateStr){
         // 选择日历组件
-        Thread.sleep(1000);
         List<WebElement> oneDateList = driver.findElements(By.xpath("//span[@aria-label=" + dateStr + "]"));
         for (WebElement oneDate : oneDateList) {
             String oneDateClassStr = oneDate.getAttribute("class");
@@ -206,17 +214,13 @@ public class JejuAirServiceImpl implements JejuAirService {
         }
 
         // 确认出发时间
-        Thread.sleep(1000);
         WebElement selectDate = driver.findElement(By.xpath("//*[@id=\"dateLayer\"]/div[2]/div[3]/button[3]"));
         selectDate.getText();
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", selectDate);
 
         // 搜索
-        Thread.sleep(1000);
         WebElement searchFlight = driver.findElement(By.id("searchFlight"));
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", searchFlight);
-        Thread.sleep(3000);
-
         return refreshPage(driver);
     }
 
@@ -267,7 +271,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
     }
 
-    private static SearchAirticketsSegment grab(WebDriver driver) throws InterruptedException, NoSuchElementException {
+    private static SearchAirticketsSegment grab(WebDriver driver){
 
         if (!checkActive(driver)) {
             return null;
@@ -358,7 +362,7 @@ public class JejuAirServiceImpl implements JejuAirService {
         return baggageRule;
     }
 
-    private static String getViaStation(WebDriver driver, WebElement listSummary) throws InterruptedException {
+    private static String getViaStation(WebDriver driver, WebElement listSummary){
         // 中转详情
         WebElement detail = listSummary.findElement(By.cssSelector("[onclick = 'openConnectSection(this);']"));
         log.info("中转次数: " + detail.getText());
@@ -511,11 +515,9 @@ public class JejuAirServiceImpl implements JejuAirService {
         closes.get(closes.size() - 1).click();
     }
 
-    private static void mockTransferClick(JavascriptExecutor driver, WebElement listSummary) throws InterruptedException {
-        Thread.sleep(1000);
+    private static void mockTransferClick(JavascriptExecutor driver, WebElement listSummary){
         WebElement detail = listSummary.findElement(By.cssSelector("[onclick = 'openConnectSection(this);']"));
         driver.executeScript("arguments[0].click();", detail);
-        Thread.sleep(1000);
     }
 
     @Override
@@ -550,7 +552,6 @@ public class JejuAirServiceImpl implements JejuAirService {
                 driver.findElement(By.xpath("//li[@data-triptype='OW']")).click();
 
                 List<SearchAirticketsInputSegment> fromSegments = searchAirticketsInput.getFromSegments();
-                List<SearchAirticketsSegment> fromSegmentsList = new ArrayList<>();
                 fromSegments.forEach(fromSegment -> {
                     String depCityCode = fromSegment.getDepCityCode();
                     String arrCityCode = fromSegment.getArrCityCode();
@@ -558,12 +559,11 @@ public class JejuAirServiceImpl implements JejuAirService {
                     String dateStr = depDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
                     mockClickDepartureStation(driver, depCityCode);
-                    mockClickArrivalStation(driver, depCityCode, arrCityCode);
+                    if (!mockClickArrivalStation(driver, depCityCode, arrCityCode)) {
+                        throw new RuntimeException(depCityCode + "到" + arrCityCode +"：该航线未开通");
+                    }
                     mockDateAndSelectClick(driver, dateStr);
-                    SearchAirticketsSegment searchAirticketsSegment = grab(driver);
-                    searchAirticketsSegment.setDepAirport(depCityCode);
-                    searchAirticketsSegment.setArrAirport(arrCityCode);
-                    fromSegmentsList.add(searchAirticketsSegment);
+                    grab(driver);
                 });
 
             }
@@ -584,7 +584,7 @@ public class JejuAirServiceImpl implements JejuAirService {
 
         SearchAirticketsPriceDetail result = new SearchAirticketsPriceDetail();
         result.setRateCode(UUID.fastUUID().toString());
-        result.setFromSegments(fromSegmentsList);
+//        result.setFromSegments(fromSegmentsList);
 
         return result;
     }
