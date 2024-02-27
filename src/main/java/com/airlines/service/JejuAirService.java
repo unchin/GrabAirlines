@@ -3,6 +3,8 @@ package com.airlines.service;
 import com.heytrip.common.domain.SearchAirticketsInput;
 import com.heytrip.common.domain.SearchAirticketsPriceDetail;
 
+import java.util.List;
+
 public interface JejuAirService {
 
     /**
@@ -13,5 +15,5 @@ public interface JejuAirService {
     /**
      * 搜索指定航空票价
      */
-    SearchAirticketsPriceDetail searchAirticketsPriceDetail(SearchAirticketsInput searchAirticketsInput);
+    List<SearchAirticketsPriceDetail> searchAirticketsPriceDetail(SearchAirticketsInput searchAirticketsInput);
 }

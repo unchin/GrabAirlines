@@ -1,35 +1,32 @@
-package com.airlines.service;
+package com.airlines.controller;
 
+import com.alibaba.fastjson2.JSON;
+import com.heytrip.common.domain.SearchAirticketsBaseInput;
 import com.heytrip.common.domain.SearchAirticketsInput;
 import com.heytrip.common.domain.SearchAirticketsInputSegment;
-import com.heytrip.common.domain.SearchAirticketsPriceDetail;
-import com.alibaba.fastjson2.JSON;
-import com.heytrip.common.enums.CurrencyEnums;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebElement;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import static org.junit.jupiter.api.Assertions.*;
 
-@Slf4j
 @SpringBootTest
-class JejuAirServiceTest {
+class JejuAirControllerTest {
 
     @Resource
-    JejuAirService jejuAirService;
+    private JejuAirController jejuAirController;
+
+//    @BeforeEach
+//    void setUp() {
+//        jejuAirController = new JejuAirController();
+//    }
 
     @Test
     void searchAirticketsPriceDetail() {
-
         SearchAirticketsInputSegment searchAirticketsInputSegment = new SearchAirticketsInputSegment();
         searchAirticketsInputSegment.setDepCityCode("GMP");
         searchAirticketsInputSegment.setArrCityCode("PUS");
@@ -45,13 +42,11 @@ class JejuAirServiceTest {
         searchAirticketsInput.setCabin("E");
         searchAirticketsInput.setRetSegments(null);
 
-        List<SearchAirticketsPriceDetail> searchAirticketsPriceDetails = jejuAirService.searchAirticketsPriceDetail(searchAirticketsInput);
-        log.info(JSON.toJSONString(searchAirticketsPriceDetails));
+        SearchAirticketsBaseInput searchAirticketsBaseInput = new SearchAirticketsBaseInput();
+        searchAirticketsBaseInput.setData(searchAirticketsInput);
+
+        Object o = jejuAirController.searchAirticketsPriceDetail(searchAirticketsBaseInput);
+        System.out.println(JSON.toJSONString(o));
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        String currency = "KRW";
-        // 如果currency的值和CurrencyEnums中的code一样，则输出他的number
-//        CurrencyEnums.getCode(currency);
-    }
 }
